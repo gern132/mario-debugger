@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "lib": ["ES2022"],
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@shared/*": ["./src/shared/*"]
+    }
+  },
+  "include": [
+    "electron.vite.config.*",
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/shared/**/*"
+  ]
+}
