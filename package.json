@@ -13,6 +13,8 @@
     "@types/node": "^20.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/source-map": "^0.5.2",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.0",
     "electron": "^34.0.0",
     "electron-builder": "^25.0.0",
@@ -20,8 +22,10 @@
     "typescript": "^5.6.0"
   },
   "dependencies": {
+    "@jridgewell/trace-mapping": "^0.3.31",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "ws": "^8.20.0"
   },
   "build": {
     "appId": "com.tripledot.rn-quality-checker",
@@ -29,7 +33,9 @@
     "publish": null,
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": ["dmg"]
+      "target": [
+        "dmg"
+      ]
     },
     "directories": {
       "buildResources": "build",

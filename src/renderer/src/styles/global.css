@@ -947,6 +947,306 @@ button { font-family: inherit; }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* ─── Logs screen ─── */
+.logs-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'SF Mono', 'Menlo', monospace;
+}
+
+.logs-source-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 16px 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.source-tab {
+  padding: 5px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.12s, border-color 0.12s;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  border-radius: 4px 4px 0 0;
+}
+
+.source-tab:hover { color: var(--text); }
+
+.source-tab.active {
+  color: var(--blue);
+  border-bottom-color: var(--blue);
+}
+
+.source-hint {
+  margin-left: 10px;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.logs-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.logs-search-wrap {
+  flex: 1;
+  min-width: 140px;
+}
+
+.logs-search {
+  width: 100%;
+}
+
+.logs-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-sm {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.logs-level-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.log-level-btn {
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.log-level-btn:hover { background: var(--surface); color: var(--text); }
+.log-level-btn.active { background: var(--surface-hover); }
+
+.log-live-badge {
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--red);
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.log-scroll-btn {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--blue);
+  background: rgba(10, 132, 255, 0.1);
+  color: var(--blue);
+  font-size: 11px;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.log-scroll-btn:hover { background: rgba(10, 132, 255, 0.2); }
+
+.log-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0 16px;
+}
+
+.log-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 16px;
+  line-height: 1.55;
+  border-left: 2px solid transparent;
+  transition: background 0.06s;
+}
+
+.log-entry:hover { background: rgba(255, 255, 255, 0.03); }
+
+.log-entry.log-warn  { border-left-color: rgba(255, 214, 10, 0.4); }
+.log-entry.log-error { border-left-color: rgba(255, 69, 58, 0.5); background: rgba(255, 69, 58, 0.04); }
+
+.log-time {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-level-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 28px;
+}
+
+.log-tag {
+  font-size: 11px;
+  color: var(--blue);
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.8;
+}
+
+.log-source-link {
+  font-size: 10px;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  padding: 1px 5px;
+  border-radius: 3px;
+  cursor: pointer;
+  /* Never grow or shrink — always sits at the end without affecting message width */
+  flex: 0 0 auto;
+  align-self: flex-start;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.12s, background 0.12s;
+}
+
+.log-source-link:hover {
+  color: var(--blue);
+  background: rgba(10, 132, 255, 0.1);
+}
+
+.log-message {
+  font-size: 11px;
+  color: var(--text);
+  word-break: break-all;
+  flex: 1;
+  min-width: 0;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.log-entry.log-warn  .log-message { color: var(--yellow); }
+.log-entry.log-error .log-message { color: var(--red); }
+.log-entry.log-debug .log-message { color: var(--text-secondary); }
+
+/* ─── JsonTree ─── */
+.log-message-rich {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.jt-inline-text {
+  font-size: 11px;
+  color: var(--text);
+  word-break: break-all;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+  padding: 1px 0;
+}
+
+.jt-root {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.jt-row {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  min-height: 18px;
+  font-size: 11px;
+  line-height: 1.6;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.jt-expandable {
+  cursor: pointer !important;
+  border-radius: 3px;
+  transition: background 0.06s;
+}
+
+.jt-expandable:hover { background: rgba(255,255,255,0.05); }
+
+.jt-arrow {
+  font-size: 9px;
+  color: var(--text-secondary);
+  width: 12px;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.jt-key {
+  color: #9cdcfe;
+  flex-shrink: 0;
+}
+
+.jt-string  { color: #ce9178; }
+.jt-number  { color: #b5cea8; }
+.jt-bool    { color: #569cd6; }
+.jt-null    { color: #569cd6; }
+
+.jt-preview {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.jt-preview-open {
+  color: var(--text-secondary);
+}
+
+.jt-meta {
+  opacity: 0.55;
+}
+
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }

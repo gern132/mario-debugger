@@ -15,7 +15,7 @@ function run(cmd: string) {
 // found as a bare command. We search known install locations once and cache it.
 let _adbPath: string | null = null
 
-async function findAdb(): Promise<string> {
+export async function findAdb(): Promise<string> {
   if (_adbPath) return _adbPath
 
   const home = os.homedir()

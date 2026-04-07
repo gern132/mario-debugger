@@ -45,6 +45,22 @@ export type MemoryStats = {
   _raw?: string      // raw adb output for debugging
 }
 
+// ── Logs ──────────────────────────────────────────
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
+export type LogEntry = {
+  id: string
+  time: string     // HH:MM:SS.mmm
+  level: LogLevel
+  tag: string
+  message: string
+  sourceFile?: string   // e.g. "src/screens/Home.tsx"
+  sourceLine?: number
+}
+
+export type LogMode = 'rn' | 'all'
+
 export type PerformanceStats = {
   totalFrames: number
   jankyFrames: number

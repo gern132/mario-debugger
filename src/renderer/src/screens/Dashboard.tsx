@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import type { Project, CheckResult, Issue, IssueRule } from '@shared/types'
 import { MemoryStatsScreen } from './MemoryStats'
 import { PerformanceStatsScreen } from './PerformanceStats'
+import { LogsScreen } from './LogsScreen'
 
-type MainTab = 'analysis' | 'memory' | 'performance'
+type MainTab = 'analysis' | 'memory' | 'performance' | 'logs'
 
 type Filter = 'all' | 'errors' | 'warnings'
 
@@ -27,7 +28,8 @@ export function Dashboard({ project, onChangeProject }: Props) {
   const [filter, setFilter]   = useState<Filter>('all')
   const [editor, setEditorState] = useState<'vscode' | 'webstorm'>('vscode')
   const [toast, setToast]     = useState('')
-  const [mainTab, setMainTab] = useState<MainTab>('analysis')
+  const [mainTab, setMainTab] = useState<MainTab>('logs')
+  const [logsEverShown, setLogsEverShown] = useState(true) // logs is default tab
 
   useEffect(() => {
     window.api.getEditorPreference().then(setEditorState)
@@ -80,19 +82,22 @@ export function Dashboard({ project, onChangeProject }: Props) {
           <span className="project-path">{shortPath}</span>
         </div>
         <div className="project-actions">
-          <button className="btn-ghost" onClick={onChangeProject}>Change</button>
-          <button
-            className={`btn-primary${running ? ' running' : ''}`}
-            onClick={run}
-            disabled={running}
-          >
-            {running ? '⏳ Analyzing...' : '▶ Run'}
-          </button>
+          <button className="btn-ghost" onClick={onChangeProject}>Change repo</button>
+          {mainTab === 'analysis' && (
+            <button
+              className={`btn-primary${running ? ' running' : ''}`}
+              onClick={run}
+              disabled={running}
+            >
+              {running ? '⏳ Analyzing...' : '▶ Run'}
+            </button>
+          )}
         </div>
       </div>
 
       <div className="main-tabs">
         {([
+          ['logs',        'Logs'],
           ['analysis',    'Code Analysis'],
           ['memory',      'Memory'],
           ['performance', 'Performance'],
@@ -100,7 +105,10 @@ export function Dashboard({ project, onChangeProject }: Props) {
           <button
             key={tab}
             className={`main-tab${mainTab === tab ? ' active' : ''}`}
-            onClick={() => setMainTab(tab)}
+            onClick={() => {
+              if (tab === 'logs') setLogsEverShown(true)
+              setMainTab(tab)
+            }}
           >
             {label}
           </button>
@@ -113,6 +121,13 @@ export function Dashboard({ project, onChangeProject }: Props) {
 
       {mainTab === 'performance' && (
         <PerformanceStatsScreen projectPath={project.path} />
+      )}
+
+      {/* LogsScreen stays mounted permanently once visited — CDP connection persists across tab switches */}
+      {logsEverShown && (
+        <div style={{ display: mainTab === 'logs' ? 'contents' : 'none' }}>
+          <LogsScreen projectPath={project.path} />
+        </div>
       )}
 
       {mainTab === 'analysis' && <div className="dashboard-body">

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import http from 'http'
 import os from 'os'
 import path from 'path'
 import {
@@ -57,7 +58,11 @@ import {
   getEditorPreference,
   setEditorPreference,
 } from './store'
-import type { Project } from '@shared/types'
+import { startLogcat, stopLogcat } from './device/logcat'
+import { startCdp, stopCdp } from './device/cdp'
+import type { Project, LogMode } from '@shared/types'
+
+let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -74,6 +79,9 @@ function createWindow(): void {
       nodeIntegration: false,
     },
   })
+
+  mainWindow = win
+  win.on('closed', () => { mainWindow = null; stopLogcat(); stopCdp() })
 
   if (process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -153,3 +161,54 @@ ipcMain.handle(
   async (_event, packageName: string, device?: string) =>
     readPerformanceStats(packageName, device)
 )
+
+// ── Logcat streaming ───────────────────────────────
+
+ipcMain.handle('start-logcat', async (_event, device: string | undefined, mode: LogMode) => {
+  if (!mainWindow) return
+  await startLogcat(mainWindow, device, mode)
+})
+
+ipcMain.handle('stop-logcat', async () => {
+  stopLogcat()
+})
+
+// ── Metro / Hermes CDP target discovery ────────────
+
+function fetchCdpTargets(port: number, timeoutMs = 2000): Promise<unknown[]> {
+  return new Promise(resolve => {
+    const req = http.get(`http://localhost:${port}/json`, res => {
+      let raw = ''
+      res.on('data', (c: string) => { raw += c })
+      res.on('end', () => {
+        try { resolve(JSON.parse(raw) as unknown[]) } catch { resolve([]) }
+      })
+    })
+    req.on('error', () => resolve([]))
+    req.setTimeout(timeoutMs, () => { req.destroy(); resolve([]) })
+  })
+}
+
+ipcMain.handle('get-cdp-targets', (_event, port: number) => fetchCdpTargets(port))
+
+// ── CDP (Hermes inspector) ─────────────────────────
+
+ipcMain.handle('start-cdp', async (_event, wsUrl: string) => {
+  if (!mainWindow) return
+  await startCdp(mainWindow, wsUrl)
+})
+
+ipcMain.handle('stop-cdp', () => stopCdp())
+
+// Scan common Metro/Expo ports and return first one with live targets
+ipcMain.handle('find-metro-port', async () => {
+  const ports = [8081, 8082, 8083, 19000, 19001, 19006]
+  const results = await Promise.all(
+    ports.map(port =>
+      fetchCdpTargets(port, 1000)
+        .then(targets => (targets.length ? { port, targets } : null))
+        .catch(() => null)
+    )
+  )
+  return results.find(r => r !== null) ?? null
+})

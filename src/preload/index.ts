@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { Project, CheckResult, MemoryStats, PerformanceStats } from '@shared/types'
+import type { IpcRendererEvent } from 'electron'
+import type { Project, CheckResult, MemoryStats, PerformanceStats, LogEntry, LogMode } from '@shared/types'
 
 contextBridge.exposeInMainWorld('api', {
   selectProjectFolder: (): Promise<string | null> =>
@@ -38,4 +39,53 @@ contextBridge.exposeInMainWorld('api', {
 
   readPerformanceStats: (packageName: string, device?: string): Promise<PerformanceStats> =>
     ipcRenderer.invoke('read-performance-stats', packageName, device),
+
+  // Logcat
+  startLogcat: (device: string | undefined, mode: LogMode): Promise<void> =>
+    ipcRenderer.invoke('start-logcat', device, mode),
+
+  stopLogcat: (): Promise<void> =>
+    ipcRenderer.invoke('stop-logcat'),
+
+  onLogEntry: (cb: (entry: LogEntry) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, entry: LogEntry) => cb(entry)
+    ipcRenderer.on('log-entry', handler)
+    return () => ipcRenderer.off('log-entry', handler)
+  },
+
+  getCdpTargets: (port: number): Promise<unknown[]> =>
+    ipcRenderer.invoke('get-cdp-targets', port),
+
+  findMetroPort: (): Promise<{ port: number; targets: unknown[] } | null> =>
+    ipcRenderer.invoke('find-metro-port'),
+
+  // CDP (Hermes inspector) — connection lives in main process (no Origin restrictions)
+  startCdp: (wsUrl: string): Promise<void> =>
+    ipcRenderer.invoke('start-cdp', wsUrl),
+
+  stopCdp: (): Promise<void> =>
+    ipcRenderer.invoke('stop-cdp'),
+
+  onCdpLog: (cb: (entry: LogEntry) => void): (() => void) => {
+    const h = (_: IpcRendererEvent, e: LogEntry) => cb(e)
+    ipcRenderer.on('cdp-log', h)
+    return () => ipcRenderer.off('cdp-log', h)
+  },
+
+  onCdpEvent: (cb: (event: 'connected' | 'closed' | 'error' | 'reconnecting', detail?: string) => void): (() => void) => {
+    const onConnected    = () => cb('connected')
+    const onClosed       = () => cb('closed')
+    const onError        = (_: IpcRendererEvent, msg: string) => cb('error', msg)
+    const onReconnecting = (_: IpcRendererEvent, msg: string) => cb('reconnecting', msg)
+    ipcRenderer.on('cdp-connected',    onConnected)
+    ipcRenderer.on('cdp-closed',       onClosed)
+    ipcRenderer.on('cdp-error',        onError)
+    ipcRenderer.on('cdp-reconnecting', onReconnecting)
+    return () => {
+      ipcRenderer.off('cdp-connected',    onConnected)
+      ipcRenderer.off('cdp-closed',       onClosed)
+      ipcRenderer.off('cdp-error',        onError)
+      ipcRenderer.off('cdp-reconnecting', onReconnecting)
+    }
+  },
 })
