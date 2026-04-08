@@ -1,4 +1,4 @@
-import type { Project, CheckResult, MemoryStats, PerformanceStats, LogEntry, LogMode } from '@shared/types'
+import type { Project, CheckResult, MemoryStats, PerformanceStats, LogEntry, LogMode, NetworkEvent } from '@shared/types'
 
 declare global {
   interface Window {
@@ -26,6 +26,8 @@ declare global {
       stopCdp: () => Promise<void>
       onCdpLog: (cb: (entry: LogEntry) => void) => () => void
       onCdpEvent: (cb: (event: 'connected' | 'closed' | 'error' | 'reconnecting', detail?: string) => void) => () => void
+      onNetworkEvent: (cb: (event: NetworkEvent) => void) => () => void
+      getNetworkResponseBody: (requestId: string) => Promise<{ body: string; base64Encoded: boolean } | null>
     }
   }
 }

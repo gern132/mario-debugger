@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
-import type { Project, CheckResult, MemoryStats, PerformanceStats, LogEntry, LogMode } from '@shared/types'
+import type { Project, CheckResult, MemoryStats, PerformanceStats, LogEntry, LogMode, NetworkEvent } from '@shared/types'
 
 contextBridge.exposeInMainWorld('api', {
   selectProjectFolder: (): Promise<string | null> =>
@@ -58,6 +58,15 @@ contextBridge.exposeInMainWorld('api', {
 
   findMetroPort: (): Promise<{ port: number; targets: unknown[] } | null> =>
     ipcRenderer.invoke('find-metro-port'),
+
+  onNetworkEvent: (cb: (event: NetworkEvent) => void): (() => void) => {
+    const h = (_: IpcRendererEvent, e: NetworkEvent) => cb(e)
+    ipcRenderer.on('network-event', h)
+    return () => ipcRenderer.off('network-event', h)
+  },
+
+  getNetworkResponseBody: (requestId: string): Promise<{ body: string; base64Encoded: boolean } | null> =>
+    ipcRenderer.invoke('get-network-response-body', requestId),
 
   // CDP (Hermes inspector) — connection lives in main process (no Origin restrictions)
   startCdp: (wsUrl: string): Promise<void> =>

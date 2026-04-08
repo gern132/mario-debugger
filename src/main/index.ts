@@ -59,7 +59,7 @@ import {
   setEditorPreference,
 } from './store'
 import { startLogcat, stopLogcat } from './device/logcat'
-import { startCdp, stopCdp } from './device/cdp'
+import { startCdp, stopCdp, getNetworkResponseBody } from './device/cdp'
 import type { Project, LogMode } from '@shared/types'
 
 let mainWindow: BrowserWindow | null = null
@@ -199,6 +199,10 @@ ipcMain.handle('start-cdp', async (_event, wsUrl: string) => {
 })
 
 ipcMain.handle('stop-cdp', () => stopCdp())
+
+ipcMain.handle('get-network-response-body', (_event, requestId: string) =>
+  getNetworkResponseBody(requestId)
+)
 
 // Scan common Metro/Expo ports and return first one with live targets
 ipcMain.handle('find-metro-port', async () => {

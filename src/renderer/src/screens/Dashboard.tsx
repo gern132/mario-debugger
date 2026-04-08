@@ -3,8 +3,9 @@ import type { Project, CheckResult, Issue, IssueRule } from '@shared/types'
 import { MemoryStatsScreen } from './MemoryStats'
 import { PerformanceStatsScreen } from './PerformanceStats'
 import { LogsScreen } from './LogsScreen'
+import { NetworkScreen } from './NetworkScreen'
 
-type MainTab = 'analysis' | 'memory' | 'performance' | 'logs'
+type MainTab = 'analysis' | 'memory' | 'performance' | 'logs' | 'network'
 
 type Filter = 'all' | 'errors' | 'warnings'
 
@@ -98,6 +99,7 @@ export function Dashboard({ project, onChangeProject }: Props) {
       <div className="main-tabs">
         {([
           ['logs',        'Logs'],
+          ['network',     'Network'],
           ['analysis',    'Code Analysis'],
           ['memory',      'Memory'],
           ['performance', 'Performance'],
@@ -114,6 +116,8 @@ export function Dashboard({ project, onChangeProject }: Props) {
           </button>
         ))}
       </div>
+
+      {mainTab === 'network' && <NetworkScreen />}
 
       {mainTab === 'memory' && (
         <MemoryStatsScreen projectPath={project.path} />

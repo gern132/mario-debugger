@@ -61,6 +61,33 @@ export type LogEntry = {
 
 export type LogMode = 'rn' | 'all'
 
+// ── Network ───────────────────────────────────────
+
+export type NetworkEvent =
+  | { type: 'request'; id: string; url: string; method: string; headers: Record<string, string>; body?: string; resourceType?: string; startTime: number }
+  | { type: 'response'; id: string; status: number; statusText: string; headers: Record<string, string>; mimeType: string }
+  | { type: 'done'; id: string; endTime: number; size: number }
+  | { type: 'fail'; id: string; endTime: number; error: string }
+
+export type NetworkEntry = {
+  id: string
+  url: string
+  method: string
+  status?: number
+  statusText?: string
+  resourceType?: string
+  mimeType?: string
+  requestHeaders?: Record<string, string>
+  responseHeaders?: Record<string, string>
+  requestBody?: string
+  startTime: number
+  endTime?: number
+  duration?: number
+  size?: number
+  failed?: boolean
+  errorText?: string
+}
+
 export type PerformanceStats = {
   totalFrames: number
   jankyFrames: number

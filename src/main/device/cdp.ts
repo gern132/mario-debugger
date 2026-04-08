@@ -1,13 +1,14 @@
 import WebSocket from 'ws'
 import http from 'http'
 import type { BrowserWindow } from 'electron'
-import type { LogEntry, LogLevel } from '@shared/types'
+import type { LogEntry, LogLevel, NetworkEvent } from '@shared/types'
 import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping'
 
 let ws: WebSocket | null = null
 let stopped = false
 let idCounter = 0
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let activeRequester: Requester | null = null
 
 export function stopCdp(): void {
   stopped = true
@@ -56,10 +57,11 @@ function connect(win: BrowserWindow, wsUrl: string, attempt: number): void {
   socket.on('open', () => {
     if (stopped) { socket.terminate(); return }
     send('Runtime.enable')
-    // Debugger domain provides Debugger.scriptParsed (with sourceMapURL) and
-    // resolves source positions in consoleAPICalled callFrames
     send('Debugger.enable')
     send('Runtime.runIfWaitingForDebugger')
+    // Network domain — Expo's /inspector/network rebroadcasts Network.* events to our session
+    send('Network.enable')
+    activeRequester = request
     if (!win.isDestroyed()) win.webContents.send('cdp-connected')
   })
 
@@ -90,6 +92,8 @@ function connect(win: BrowserWindow, wsUrl: string, attempt: number): void {
       if (isSystemMessage(p.args)) return
       void handleConsoleCall(win, p, request, sourceMaps)
     }
+
+    handleNetworkEvent(win, msg.method ?? '', msg.params)
   })
 
   socket.on('error', (err: Error) => {
@@ -99,6 +103,7 @@ function connect(win: BrowserWindow, wsUrl: string, attempt: number): void {
   socket.on('close', (code: number, reason: Buffer) => {
     ws = null
     pending.clear()
+    activeRequester = null
     if (stopped || win.isDestroyed()) return
     const reasonStr = reason.toString()
     if (code !== 1000) console.log(`[CDP] Closed code=${code}${reasonStr ? ' ' + reasonStr : ''}`)
@@ -107,6 +112,69 @@ function connect(win: BrowserWindow, wsUrl: string, attempt: number): void {
       if (!stopped && !win.isDestroyed()) connect(win, wsUrl, attempt + 1)
     }, Math.min(1000 * attempt, 5000))
   })
+}
+
+// ── Network event handling ────────────────────────
+
+function handleNetworkEvent(win: BrowserWindow, method: string, params: unknown): void {
+  if (!method.startsWith('Network.') || win.isDestroyed()) return
+
+  const p = params as Record<string, unknown>
+
+  let event: NetworkEvent | null = null
+
+  if (method === 'Network.requestWillBeSent') {
+    const req = p.request as Record<string, unknown>
+    event = {
+      type: 'request',
+      id: p.requestId as string,
+      url: req.url as string,
+      method: req.method as string,
+      headers: (req.headers ?? {}) as Record<string, string>,
+      body: req.postData as string | undefined,
+      resourceType: p.type as string | undefined,
+      startTime: (p.timestamp as number) * 1000,
+    }
+  } else if (method === 'Network.responseReceived') {
+    const res = p.response as Record<string, unknown>
+    event = {
+      type: 'response',
+      id: p.requestId as string,
+      status: res.status as number,
+      statusText: res.statusText as string,
+      headers: (res.headers ?? {}) as Record<string, string>,
+      mimeType: (res.mimeType as string) ?? '',
+    }
+  } else if (method === 'Network.loadingFinished') {
+    event = {
+      type: 'done',
+      id: p.requestId as string,
+      endTime: (p.timestamp as number) * 1000,
+      size: (p.encodedDataLength as number) ?? 0,
+    }
+  } else if (method === 'Network.loadingFailed') {
+    event = {
+      type: 'fail',
+      id: p.requestId as string,
+      endTime: (p.timestamp as number) * 1000,
+      error: (p.errorText as string) ?? 'Failed',
+    }
+  }
+
+  if (event) win.webContents.send('network-event', event)
+}
+
+export async function getNetworkResponseBody(
+  requestId: string
+): Promise<{ body: string; base64Encoded: boolean } | null> {
+  if (!activeRequester) return null
+  try {
+    return await activeRequester<{ body: string; base64Encoded: boolean }>(
+      'Network.getResponseBody', { requestId }
+    )
+  } catch {
+    return null
+  }
 }
 
 // ── Source map loading ────────────────────────────
