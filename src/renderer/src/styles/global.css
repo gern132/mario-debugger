@@ -1485,3 +1485,196 @@ button { font-family: inherit; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* ─── Light theme ─── */
+html[data-theme="light"], :root[data-theme="light"], [data-theme="light"] {
+  --bg:             #f2f2f7;
+  --surface:        #ffffff;
+  --surface-hover:  #e5e5ea;
+  --border:         rgba(0, 0, 0, 0.1);
+  --text:           #1c1c1e;
+  --text-secondary: #6e6e73;
+  --text-dim:       #aeaeb2;
+  --red:            #ff3b30;
+  --yellow:         #ff9500;
+  --green:          #34c759;
+  --blue:           #007aff;
+}
+
+[data-theme="light"] html,
+[data-theme="light"] body,
+[data-theme="light"] #root {
+  background: var(--bg);
+}
+
+/* rgba(white, x) → rgba(black, x) overrides */
+[data-theme="light"] .bar-track,
+[data-theme="light"] .rec-progress-track { background: rgba(0,0,0,0.06); }
+
+[data-theme="light"] .spinner { border-color: rgba(0,0,0,0.08); border-top-color: var(--blue); }
+
+[data-theme="light"] .drop-zone { border-color: rgba(0,0,0,0.12); }
+
+[data-theme="light"] .log-entry:hover { background: rgba(0,0,0,0.03); }
+[data-theme="light"] .log-entry.log-error { background: rgba(255,59,48,0.05); }
+
+[data-theme="light"] .net-row { border-bottom: 1px solid rgba(0,0,0,0.05); }
+[data-theme="light"] .net-entry:hover { background: rgba(0,0,0,0.03); }
+[data-theme="light"] .net-header { background: var(--surface); border-bottom: 1px solid var(--border) !important; }
+[data-theme="light"] .net-header-row { border-bottom: 1px solid rgba(0,0,0,0.05); }
+
+[data-theme="light"] .jt-expandable:hover { background: rgba(0,0,0,0.05); }
+[data-theme="light"] .issue-location:hover { background: rgba(0,0,0,0.05); }
+
+[data-theme="light"] .stat-card.neutral { border-left-color: rgba(0,0,0,0.12); }
+
+/* JSON tree colors adjusted for light background */
+[data-theme="light"] .jt-key         { color: #0070c1; }
+[data-theme="light"] .jt-string      { color: #a31515; }
+[data-theme="light"] .jt-number      { color: #098658; }
+[data-theme="light"] .jt-bool,
+[data-theme="light"] .jt-null        { color: #0000ff; }
+[data-theme="light"] .net-header-key { color: #0070c1; }
+
+[data-theme="light"] ::-webkit-scrollbar-thumb       { background: rgba(0,0,0,0.15); }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover  { background: rgba(0,0,0,0.28); }
+
+/* ─── Gear / icon button ─── */
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+  -webkit-app-region: no-drag;
+}
+
+.btn-icon:hover { background: var(--surface-hover); color: var(--text); }
+
+/* ─── Settings panel ─── */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0,0,0,0.35);
+  -webkit-app-region: no-drag;
+}
+
+[data-theme="light"] .settings-overlay { background: rgba(0,0,0,0.2); }
+
+.settings-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  animation: drawer-in 0.18s ease;
+}
+
+@keyframes drawer-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.settings-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.settings-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.1s, background 0.1s;
+}
+
+.settings-close:hover { color: var(--text); background: var(--surface-hover); }
+
+.settings-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.settings-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: -4px;
+}
+
+/* ─── Port chips ─── */
+.ports-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.port-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 9px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 11px;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  color: var(--text);
+}
+
+.port-chip-remove {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 3px;
+  border-radius: 50%;
+  transition: color 0.1s, background 0.1s;
+}
+
+.port-chip-remove:hover { color: var(--red); background: rgba(255,59,48,0.1); }
+
+.port-add-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

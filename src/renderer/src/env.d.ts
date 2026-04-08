@@ -10,6 +10,10 @@ declare global {
       saveRecentProject: (project: Project) => Promise<void>
       getEditorPreference: () => Promise<'vscode' | 'webstorm'>
       setEditorPreference: (editor: 'vscode' | 'webstorm') => Promise<void>
+      getTheme: () => Promise<'dark' | 'light'>
+      setTheme: (theme: 'dark' | 'light') => Promise<void>
+      getNetworkPorts: () => Promise<number[]>
+      setNetworkPorts: (ports: number[]) => Promise<void>
       // Device
       getAdbDevices: () => Promise<string[]>
       detectPackageName: (projectPath: string) => Promise<string | null>

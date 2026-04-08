@@ -4,6 +4,7 @@ import { MemoryStatsScreen } from './MemoryStats'
 import { PerformanceStatsScreen } from './PerformanceStats'
 import { LogsScreen } from './LogsScreen'
 import { NetworkScreen } from './NetworkScreen'
+import { SettingsPanel } from './SettingsPanel'
 
 type MainTab = 'analysis' | 'memory' | 'performance' | 'logs' | 'network'
 
@@ -31,6 +32,7 @@ export function Dashboard({ project, onChangeProject }: Props) {
   const [toast, setToast]     = useState('')
   const [mainTab, setMainTab] = useState<MainTab>('logs')
   const [logsEverShown, setLogsEverShown] = useState(true) // logs is default tab
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
     window.api.getEditorPreference().then(setEditorState)
@@ -84,6 +86,11 @@ export function Dashboard({ project, onChangeProject }: Props) {
         </div>
         <div className="project-actions">
           <button className="btn-ghost" onClick={onChangeProject}>Change repo</button>
+          <button className="btn-icon" onClick={() => setSettingsOpen(true)} title="Settings">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.07.63-.07.94s.02.64.07.94L2.86 14.52a.47.47 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/>
+            </svg>
+          </button>
           {mainTab === 'analysis' && (
             <button
               className={`btn-primary${running ? ' running' : ''}`}
@@ -237,6 +244,7 @@ export function Dashboard({ project, onChangeProject }: Props) {
       </div>}
 
       {toast && <div className="toast">{toast}</div>}
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
     </div>
   )
 }

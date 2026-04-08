@@ -24,6 +24,18 @@ contextBridge.exposeInMainWorld('api', {
   setEditorPreference: (editor: 'vscode' | 'webstorm'): Promise<void> =>
     ipcRenderer.invoke('set-editor-preference', editor),
 
+  getTheme: (): Promise<'dark' | 'light'> =>
+    ipcRenderer.invoke('get-theme'),
+
+  setTheme: (theme: 'dark' | 'light'): Promise<void> =>
+    ipcRenderer.invoke('set-theme', theme),
+
+  getNetworkPorts: (): Promise<number[]> =>
+    ipcRenderer.invoke('get-network-ports'),
+
+  setNetworkPorts: (ports: number[]): Promise<void> =>
+    ipcRenderer.invoke('set-network-ports', ports),
+
   // Device
   getAdbDevices: (): Promise<string[]> =>
     ipcRenderer.invoke('get-adb-devices'),

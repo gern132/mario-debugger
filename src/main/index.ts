@@ -57,6 +57,10 @@ import {
   saveRecentProject,
   getEditorPreference,
   setEditorPreference,
+  getTheme,
+  setTheme,
+  getNetworkPorts,
+  setNetworkPorts,
 } from './store'
 import { startLogcat, stopLogcat } from './device/logcat'
 import { startCdp, stopCdp, getNetworkResponseBody } from './device/cdp'
@@ -136,6 +140,11 @@ ipcMain.handle('set-editor-preference', async (_event, editor: 'vscode' | 'webst
   await setEditorPreference(editor)
 })
 
+ipcMain.handle('get-theme', async () => getTheme())
+ipcMain.handle('set-theme', async (_event, theme: 'dark' | 'light') => setTheme(theme))
+ipcMain.handle('get-network-ports', async () => getNetworkPorts())
+ipcMain.handle('set-network-ports', async (_event, ports: number[]) => setNetworkPorts(ports))
+
 // ── Device / ADB handlers ──────────────────────────
 
 ipcMain.handle('get-adb-devices', async () => getConnectedDevices())
@@ -206,7 +215,7 @@ ipcMain.handle('get-network-response-body', (_event, requestId: string) =>
 
 // Scan common Metro/Expo ports and return first one with live targets
 ipcMain.handle('find-metro-port', async () => {
-  const ports = [8081, 8082, 8083, 19000, 19001, 19006]
+  const ports = await getNetworkPorts()
   const results = await Promise.all(
     ports.map(port =>
       fetchCdpTargets(port, 1000)
