@@ -39,7 +39,7 @@ export function ProjectPicker({ onProjectSelected }: Props) {
       <div className="picker-content">
         <div className="app-header">
           <div className="app-icon">⚡</div>
-          <h1>RN Quality Checker</h1>
+          <h1>Mario Debugger</h1>
           <p>Static analysis for React Native projects</p>
         </div>
 
