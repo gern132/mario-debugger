@@ -3,11 +3,87 @@ import type { PerformanceStats } from '@shared/types'
 
 interface Props { projectPath: string }
 
-type SessionMode = 'timed' | 'manual'
+type SessionMode  = 'timed' | 'manual'
 type SessionState = 'idle' | 'recording' | 'reading'
 
 const DURATIONS = [10, 15, 30, 60] as const
 type Duration = typeof DURATIONS[number]
+
+// ── Helpers ───────────────────────────────────────
+
+function fmtTime(s: number) {
+  const m = Math.floor(s / 60)
+  return `${m}:${String(s % 60).padStart(2, '0')}`
+}
+
+// Frame budget in ms for the given refresh rate
+function budget(hz: number): number {
+  return parseFloat((1000 / hz).toFixed(1))
+}
+
+function frameColor(ms: number, budgetMs: number): string {
+  if (ms <= budgetMs)       return 'var(--green)'
+  if (ms <= budgetMs * 2)   return 'var(--yellow)'
+  return 'var(--red)'
+}
+
+// For React Native we use SEVERE jank (>32ms) as the primary quality indicator.
+// Android's built-in jankyPercent uses >16ms which counts imperceptible frames
+// caused by RN's bridge overhead, giving misleadingly high numbers.
+function jankyStatus(s: PerformanceStats) {
+  if (s.totalFrames > 0 && (s.mildJankFrames + s.severeJankFrames > 0 || s.jankyFrames === 0)) {
+    const severePct = (s.severeJankFrames / s.totalFrames) * 100
+    if (severePct <= 2)  return { label: 'Smooth',     color: 'var(--green)',  cls: 'good' }
+    if (severePct <= 8)  return { label: 'Acceptable', color: 'var(--yellow)', cls: 'warn' }
+    return                      { label: 'Needs work',  color: 'var(--red)',    cls: 'bad'  }
+  }
+  // Fallback when histogram unavailable: use looser RN-adjusted thresholds
+  if (s.jankyPercent <= 15) return { label: 'Smooth',     color: 'var(--green)',  cls: 'good' }
+  if (s.jankyPercent <= 35) return { label: 'Acceptable', color: 'var(--yellow)', cls: 'warn' }
+  return                           { label: 'Needs work',  color: 'var(--red)',    cls: 'bad'  }
+}
+
+// ── Insights ──────────────────────────────────────
+
+interface Insight { kind: 'warn' | 'info'; text: string }
+
+function getInsights(s: PerformanceStats, budgetMs: number): Insight[] {
+  const out: Insight[] = []
+  const severePct = s.totalFrames > 0 ? (s.severeJankFrames / s.totalFrames) * 100 : 0
+
+  if (s.buildType === 'debug') {
+    out.push({ kind: 'warn', text: 'Debug build: Hermes runs in interpreter mode — perf is significantly worse than Release. Always profile Release builds.' })
+  }
+
+  const isUiBottleneck = s.slowUiThread > 0 && s.slowUiThread >= s.missedVsync
+  if (isUiBottleneck && s.slowUiThread > 5) {
+    out.push({ kind: 'warn', text: `UI thread is the main bottleneck (${s.slowUiThread} slow frames). Likely: heavy JS bridge calls, synchronous operations, or expensive layout traversals. Profile with Flipper Performance Monitor.` })
+  } else if (s.missedVsync > s.totalFrames * 0.1) {
+    out.push({ kind: 'warn', text: `High VSync misses (${s.missedVsync} frames). CPU/GPU is overloaded — check for overdraw, expensive animations or heavy background work.` })
+  }
+
+  if (s.slowBitmapUploads > 5) {
+    out.push({ kind: 'warn', text: `${s.slowBitmapUploads} bitmap upload stalls — large images are blocking the render thread. Use smaller resolutions, FastImage, or preload images before displaying.` })
+  }
+
+  if (s.slowDrawCommands > 5) {
+    out.push({ kind: 'warn', text: `${s.slowDrawCommands} slow GPU command submissions. Reduce overdraw or complex canvas operations.` })
+  }
+
+  if (s.p99 > budgetMs * 6) {
+    out.push({ kind: 'warn', text: `P99 spike of ${s.p99}ms is ${Math.round(s.p99 / budgetMs)}× over budget — occasional heavy operations cause visible freezes (navigation, large list renders?).` })
+  }
+
+  if (severePct <= 2 && s.buildType !== 'debug' && s.totalFrames > 30) {
+    out.push({ kind: 'info', text: 'Solid rendering performance — almost no user-visible stutter.' })
+  }
+
+  out.push({ kind: 'info', text: 'gfxinfo measures the render/GPU thread only. For JS thread profiling use Flipper Performance Monitor or Android Systrace.' })
+
+  return out
+}
+
+// ── Sub-components ────────────────────────────────
 
 function Bar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? Math.min(Math.round((value / max) * 100), 100) : 0
@@ -18,32 +94,45 @@ function Bar({ value, max, color }: { value: number; max: number; color: string 
   )
 }
 
-// Android counts any frame >16.67ms as janky (1 vsync at 60Hz).
-// RN apps only render on change, so 200 frames / 30s = ~6.7fps render rate — normal.
-// Realistic thresholds for RN:  ≤10% great, ≤25% acceptable, >25% needs work.
-function jankyStatus(pct: number) {
-  if (pct <= 10) return { label: 'Smooth',     color: 'var(--green)',  cls: 'good' }
-  if (pct <= 25) return { label: 'Acceptable', color: 'var(--yellow)', cls: 'warn' }
-  return             { label: 'Needs work',  color: 'var(--red)',    cls: 'bad'  }
+function IssueRow({
+  label, desc, value, total, color,
+}: {
+  label: string; desc: string; value: number; total: number; color: string
+}) {
+  if (value === 0) return null
+  const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0'
+  return (
+    <div className="metric-row">
+      <div className="metric-row-top">
+        <div className="metric-info">
+          <div className="metric-label-row">
+            <span className="metric-label" style={{ color }}>{label}</span>
+          </div>
+          <span className="metric-desc">{desc}</span>
+        </div>
+        <div className="metric-value-group">
+          <span className="metric-value" style={{ color }}>{value} frames</span>
+          <span className="metric-pct">{pct}% of total</span>
+        </div>
+      </div>
+      <Bar value={value} max={total} color={color} />
+    </div>
+  )
 }
 
-function fmtTime(s: number) {
-  const m = Math.floor(s / 60)
-  const sec = s % 60
-  return `${m}:${String(sec).padStart(2, '0')}`
-}
+// ── Screen ────────────────────────────────────────
 
 export function PerformanceStatsScreen({ projectPath }: Props) {
-  const [devices, setDevices]         = useState<string[]>([])
-  const [device, setDevice]           = useState('')
-  const [pkg, setPkg]                 = useState('')
-  const [sessionMode, setSessionMode] = useState<SessionMode>('timed')
-  const [duration, setDuration]       = useState<Duration>(30)
+  const [devices, setDevices]           = useState<string[]>([])
+  const [device, setDevice]             = useState('')
+  const [pkg, setPkg]                   = useState('')
+  const [sessionMode, setSessionMode]   = useState<SessionMode>('timed')
+  const [duration, setDuration]         = useState<Duration>(30)
   const [sessionState, setSessionState] = useState<SessionState>('idle')
-  const [elapsed, setElapsed]         = useState(0)
-  const [stats, setStats]             = useState<PerformanceStats | null>(null)
-  const [sessionSec, setSessionSec]   = useState(0)
-  const [error, setError]             = useState<string | null>(null)
+  const [elapsed, setElapsed]           = useState(0)
+  const [stats, setStats]               = useState<PerformanceStats | null>(null)
+  const [sessionSec, setSessionSec]     = useState(0)
+  const [error, setError]               = useState<string | null>(null)
 
   const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
   const elapsedRef = useRef(0)
@@ -76,15 +165,12 @@ export function PerformanceStatsScreen({ projectPath }: Props) {
     }
 
     setSessionState('recording')
-
-    const isTimed = sessionMode === 'timed'
-    const target  = duration
+    const target = duration
 
     timerRef.current = setInterval(() => {
       elapsedRef.current += 1
       setElapsed(elapsedRef.current)
-
-      if (isTimed && elapsedRef.current >= target) {
+      if (sessionMode === 'timed' && elapsedRef.current >= target) {
         clearInterval(timerRef.current!)
         timerRef.current = null
         void readStats()
@@ -110,13 +196,12 @@ export function PerformanceStatsScreen({ projectPath }: Props) {
   const isReading   = sessionState === 'reading'
   const isBusy      = isRecording || isReading
   const noDevice    = devices.length === 0
-
-  const progress = sessionMode === 'timed' && isRecording
-    ? Math.min((elapsed / duration) * 100, 100)
-    : null
+  const progress    = sessionMode === 'timed' && isRecording
+    ? Math.min((elapsed / duration) * 100, 100) : null
 
   return (
     <div className="device-panel">
+
       {/* Controls */}
       <div className="device-controls">
         <div className="control-row">
@@ -153,18 +238,15 @@ export function PerformanceStatsScreen({ projectPath }: Props) {
           <div className="session-mode-row">
             <span className="control-label">Mode</span>
             <div className="mode-toggle">
-              <button
-                className={`mode-btn${sessionMode === 'timed' ? ' active' : ''}`}
-                onClick={() => setSessionMode('timed')}
-              >
-                Timed
-              </button>
-              <button
-                className={`mode-btn${sessionMode === 'manual' ? ' active' : ''}`}
-                onClick={() => setSessionMode('manual')}
-              >
-                Manual
-              </button>
+              {(['timed', 'manual'] as SessionMode[]).map(m => (
+                <button
+                  key={m}
+                  className={`mode-btn${sessionMode === m ? ' active' : ''}`}
+                  onClick={() => setSessionMode(m)}
+                >
+                  {m === 'timed' ? 'Timed' : 'Manual'}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -187,7 +269,7 @@ export function PerformanceStatsScreen({ projectPath }: Props) {
 
           {sessionMode === 'manual' && (
             <p className="manual-hint">
-              Start the session, interact with your app, then stop manually.
+              Start the session, interact with your app (scroll, navigate, run animations), then stop manually.
             </p>
           )}
 
@@ -201,7 +283,7 @@ export function PerformanceStatsScreen({ projectPath }: Props) {
         </div>
       )}
 
-      {/* Recording state */}
+      {/* Recording */}
       {isRecording && (
         <div className="session-recording">
           <div className="recording-header">
@@ -212,26 +294,18 @@ export function PerformanceStatsScreen({ projectPath }: Props) {
               <span className="rec-target">/ {fmtTime(duration)}</span>
             )}
           </div>
-
           {progress !== null && (
             <div className="rec-progress-track">
-              <div
-                className="rec-progress-fill"
-                style={{ width: `${progress}%` }}
-              />
+              <div className="rec-progress-fill" style={{ width: `${progress}%` }} />
             </div>
           )}
-
           <p className="rec-hint">
             {sessionMode === 'timed'
-              ? 'Interact with your app — stats will be read automatically when time is up.'
-              : 'Interact with your app, then click Stop when done.'}
+              ? 'Interact with your app — stats will be read automatically.'
+              : 'Scroll, navigate, trigger animations, then stop.'}
           </p>
-
           {sessionMode === 'manual' && (
-            <button className="btn-stop" onClick={readStats}>
-              ■ Stop & Read
-            </button>
+            <button className="btn-stop" onClick={readStats}>■ Stop & Read</button>
           )}
         </div>
       )}
@@ -245,7 +319,6 @@ export function PerformanceStatsScreen({ projectPath }: Props) {
 
       {error && <div className="device-error">{error}</div>}
 
-      {/* Idle — no stats yet */}
       {sessionState === 'idle' && !stats && !error && (
         <div className="empty-state">
           <p>Configure a session above and press Start</p>
@@ -254,93 +327,202 @@ export function PerformanceStatsScreen({ projectPath }: Props) {
 
       {/* Results */}
       {stats && sessionState === 'idle' && (() => {
-        const renderFps   = sessionSec > 0 ? stats.totalFrames / sessionSec : 0
-        const isIdle      = renderFps < 2 || stats.totalFrames < 30
-        const status      = isIdle ? null : jankyStatus(stats.jankyPercent)
-        const maxMs       = Math.max(stats.p99, 32)
+        const budgetMs   = budget(stats.refreshRate)
+        const renderFps  = sessionSec > 0 ? stats.totalFrames / sessionSec : 0
+        const isIdle     = renderFps < 2 || stats.totalFrames < 30
+        const status     = isIdle ? null : jankyStatus(stats)
+        const insights   = isIdle ? [] : getInsights(stats, budgetMs)
+        const hasHistogram = stats.mildJankFrames + stats.severeJankFrames > 0
+        const severePct  = stats.totalFrames > 0
+          ? ((stats.severeJankFrames / stats.totalFrames) * 100).toFixed(1) : '0'
+        const mildPct    = stats.totalFrames > 0
+          ? ((stats.mildJankFrames / stats.totalFrames) * 100).toFixed(1) : '0'
+        const maxMs     = Math.max(stats.p99, budgetMs * 2)
+        const totalIssues = stats.slowUiThread + stats.missedVsync + stats.slowBitmapUploads + stats.slowDrawCommands
 
         return (
           <div className="stats-body">
+
+            {/* Build type banner */}
+            {stats.buildType === 'debug' && (
+              <div className="build-type-banner debug" style={{ marginBottom: 16 }}>
+                <span className="build-type-icon">⚠</span>
+                <div>
+                  <strong>Debug build</strong> — performance is much worse than Release.
+                  <span className="build-type-sub"> Hermes runs in interpreter mode (no bytecode), React DevTools active. Always profile Release builds.</span>
+                </div>
+              </div>
+            )}
+            {stats.buildType === 'release' && (
+              <div className="build-type-banner release" style={{ marginBottom: 16 }}>
+                <span className="build-type-icon">✓</span>
+                <strong>Release build</strong> — accurate performance profile.
+              </div>
+            )}
+
             {isIdle ? (
               <>
-                <div className="status-badge good">Idle</div>
+                <div className="status-badge good">Idle / No rendering</div>
                 <div className="perf-summary">
                   <span className="perf-big">{stats.totalFrames}</span>
-                  <span className="perf-sub">frames</span>
-                  <span className="perf-sep">·</span>
-                  <span className="perf-big">{renderFps.toFixed(1)}</span>
-                  <span className="perf-sub">fps avg</span>
+                  <span className="perf-sub">frames in {sessionSec}s</span>
                 </div>
                 <div className="perf-note idle">
-                  ✓ No active rendering detected — the screen was static.
-                  RN only renders when something changes, so near-zero fps on a
-                  still screen is correct and efficient behavior.
-                  Interact with the app (scroll, navigate, animations) to get
-                  meaningful frame stats.
+                  ✓ No active rendering detected. React Native only renders when state changes — a static screen produces near-zero frames, which is correct and efficient. Scroll, navigate or trigger animations to get meaningful data.
                 </div>
               </>
             ) : (
               <>
-                <div className={`status-badge ${status!.cls}`}>{status!.label}</div>
+                {/* Header */}
+                <div className="perf-header-row">
+                  <div className={`status-badge ${status!.cls}`}>{status!.label}</div>
+                  <span className="perf-refresh-badge">
+                    {stats.refreshRate}Hz · {budgetMs}ms budget
+                    {stats.buildType !== 'unknown' && (
+                      <span className={`build-badge ${stats.buildType}`} style={{ marginLeft: 6 }}>
+                        {stats.buildType}
+                      </span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Summary numbers */}
                 <div className="perf-summary">
                   <span className="perf-big">{stats.totalFrames.toLocaleString()}</span>
                   <span className="perf-sub">frames</span>
                   <span className="perf-sep">·</span>
-                  <span className="perf-big" style={{ color: status!.color }}>
-                    {stats.jankyPercent.toFixed(1)}%
-                  </span>
-                  <span className="perf-sub">janky</span>
+                  {hasHistogram ? (
+                    <>
+                      <span className="perf-big" style={{ color: status!.color }}>
+                        {severePct}%
+                      </span>
+                      <span className="perf-sub">severe jank</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="perf-big" style={{ color: status!.color }}>
+                        {stats.jankyPercent.toFixed(1)}%
+                      </span>
+                      <span className="perf-sub">janky</span>
+                    </>
+                  )}
                   <span className="perf-sep">·</span>
                   <span className="perf-big">{renderFps.toFixed(1)}</span>
                   <span className="perf-sub">fps avg</span>
                 </div>
-                <div className="perf-note">
-                  Janky = frame &gt;16ms (1 vsync at 60Hz). Threshold: ≤10% great, ≤25% acceptable.
+
+                {hasHistogram ? (
+                  <div className="perf-jank-breakdown">
+                    <div className="perf-jank-row">
+                      <span className="perf-jank-dot" style={{ background: 'var(--red)' }} />
+                      <span className="perf-jank-label">Severe jank &gt;32ms</span>
+                      <span className="perf-jank-val" style={{ color: 'var(--red)' }}>{stats.severeJankFrames} frames ({severePct}%)</span>
+                      <span className="perf-jank-hint">— user notices</span>
+                    </div>
+                    <div className="perf-jank-row">
+                      <span className="perf-jank-dot" style={{ background: 'var(--yellow)' }} />
+                      <span className="perf-jank-label">Mild jank 17–32ms</span>
+                      <span className="perf-jank-val" style={{ color: 'var(--text-secondary)' }}>{stats.mildJankFrames} frames ({mildPct}%)</span>
+                      <span className="perf-jank-hint">— RN bridge overhead, usually imperceptible</span>
+                    </div>
+                    <div className="perf-jank-row">
+                      <span className="perf-jank-dot" style={{ background: 'var(--text-dim)', opacity: 0.5 }} />
+                      <span className="perf-jank-label">Android total</span>
+                      <span className="perf-jank-val" style={{ color: 'var(--text-dim)' }}>{stats.jankyPercent.toFixed(1)}% janky</span>
+                      <span className="perf-jank-hint">— includes mild+severe (misleading for RN)</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="perf-note">
+                    Histogram unavailable — using Android janky% with RN-adjusted thresholds (≤15% smooth, ≤35% acceptable).
+                  </div>
+                )}
+
+                {/* Frame time percentiles */}
+                <div className="section-label">Frame times</div>
+                <div className="metric-list">
+                  {([
+                    { label: 'P50', value: stats.p50, desc: '50% of frames rendered faster than this' },
+                    { label: 'P90', value: stats.p90, desc: '90% of frames rendered faster than this' },
+                    { label: 'P95', value: stats.p95, desc: 'Represents typical worst-case frame time' },
+                    { label: 'P99', value: stats.p99, desc: 'Worst 1% — visible stutter spikes' },
+                  ] as const).map(({ label, value, desc }) => {
+                    const color = frameColor(value, budgetMs)
+                    return (
+                      <div key={label} className="metric-row">
+                        <div className="metric-row-top">
+                          <div className="metric-info">
+                            <div className="metric-label-row">
+                              <span className="metric-label perf-label">{label}</span>
+                            </div>
+                            <span className="metric-desc">{desc}</span>
+                          </div>
+                          <div className="metric-value-group">
+                            <span className="metric-value" style={{ color }}>{value}ms</span>
+                            <span className="metric-pct">
+                              {value > budgetMs ? `${(value / budgetMs).toFixed(1)}× budget` : 'within budget'}
+                            </span>
+                          </div>
+                        </div>
+                        <Bar value={value} max={maxMs} color={color} />
+                      </div>
+                    )
+                  })}
                 </div>
+
+                {/* Frame issues breakdown */}
+                {totalIssues > 0 && <>
+                  <div className="section-label" style={{ marginTop: 16 }}>Frame issue breakdown</div>
+                  <p className="perf-issues-hint">What caused the {stats.jankyFrames} janky frames:</p>
+                  <div className="metric-list">
+                    <IssueRow
+                      label="Slow UI Thread"
+                      desc="Main thread overloaded — JS bridge calls, layout, or event handlers took too long"
+                      value={stats.slowUiThread}
+                      total={stats.totalFrames}
+                      color="var(--red)"
+                    />
+                    <IssueRow
+                      label="Missed VSync"
+                      desc="Frame started too late — CPU/GPU was busy when the display requested the next frame"
+                      value={stats.missedVsync}
+                      total={stats.totalFrames}
+                      color="var(--yellow)"
+                    />
+                    <IssueRow
+                      label="Slow Bitmap Uploads"
+                      desc="Uploading images to GPU stalled the render thread — use smaller images or FastImage"
+                      value={stats.slowBitmapUploads}
+                      total={stats.totalFrames}
+                      color="#a78bfa"
+                    />
+                    <IssueRow
+                      label="Slow Draw Commands"
+                      desc="GPU command submission was delayed — reduce overdraw or complex canvas operations"
+                      value={stats.slowDrawCommands}
+                      total={stats.totalFrames}
+                      color="#60a5fa"
+                    />
+                  </div>
+                </>}
+
+                {/* Insights */}
+                {insights.length > 0 && <>
+                  <div className="section-label" style={{ marginTop: 16 }}>Insights</div>
+                  <div className="perf-insights">
+                    {insights.map((ins, i) => (
+                      <div key={i} className={`perf-insight ${ins.kind}`}>
+                        <span className="perf-insight-icon">{ins.kind === 'warn' ? '⚠' : 'ℹ'}</span>
+                        <span>{ins.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>}
               </>
             )}
 
-            {!isIdle && <>
-              <div className="section-label">Frame times</div>
-              <div className="metric-list">
-                {([
-                  { label: 'P50', value: stats.p50 },
-                  { label: 'P90', value: stats.p90 },
-                  { label: 'P95', value: stats.p95 },
-                  { label: 'P99', value: stats.p99 },
-                ] as const).map(({ label, value }) => {
-                  const color = value <= 16 ? 'var(--green)' : value <= 32 ? 'var(--yellow)' : 'var(--red)'
-                  return (
-                    <div key={label} className="metric-row">
-                      <div className="metric-row-top">
-                        <span className="metric-label perf-label">{label}</span>
-                        <span className="metric-value" style={{ color }}>{value}ms</span>
-                      </div>
-                      <Bar value={value} max={maxMs} color={color} />
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div className="section-label" style={{ marginTop: 16 }}>Frame issues</div>
-              <div className="detail-rows">
-                <div className="detail-row">
-                  <span>Slow UI thread</span>
-                  <span className={stats.slowUiThread > 10 ? 'warn-text' : ''}>{stats.slowUiThread} frames</span>
-                </div>
-                <div className="detail-row">
-                  <span>Missed VSync</span>
-                  <span className={stats.missedVsync > 10 ? 'warn-text' : ''}>{stats.missedVsync} frames</span>
-                </div>
-                <div className="detail-row">
-                  <span>Janky frames</span>
-                  <span>{stats.jankyFrames} / {stats.totalFrames}</span>
-                </div>
-              </div>
-            </>}
-
             <p className="stats-time">
-              Measured at {new Date(stats.timestamp).toLocaleTimeString('en-US', {
+              Session: {sessionSec}s · Measured at {new Date(stats.timestamp).toLocaleTimeString('en-US', {
                 hour: '2-digit', minute: '2-digit', second: '2-digit',
               })}
             </p>

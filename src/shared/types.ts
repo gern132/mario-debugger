@@ -41,6 +41,7 @@ export type MemoryStats = {
   stack: number
   graphics: number
   system: number
+  buildType: 'debug' | 'release' | 'unknown'
   timestamp: string
   _raw?: string      // raw adb output for debugging
 }
@@ -90,13 +91,19 @@ export type NetworkEntry = {
 
 export type PerformanceStats = {
   totalFrames: number
-  jankyFrames: number
+  jankyFrames: number       // Android's count (>1 vsync) — includes imperceptible frames
   jankyPercent: number
-  p50: number        // ms
+  mildJankFrames: number    // 17–32ms: borderline, usually imperceptible in RN
+  severeJankFrames: number  // >32ms: visible stutters, user actually notices
+  p50: number              // ms
   p90: number
   p95: number
   p99: number
   slowUiThread: number
   missedVsync: number
+  slowBitmapUploads: number
+  slowDrawCommands: number
+  refreshRate: number
+  buildType: 'debug' | 'release' | 'unknown'
   timestamp: string
 }

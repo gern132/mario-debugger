@@ -101,14 +101,32 @@ export async function detectPackageName(projectPath: string): Promise<string | n
 
 function escRe(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
 
+export async function detectBuildType(
+  packageName: string,
+  device?: string
+): Promise<'debug' | 'release' | 'unknown'> {
+  try {
+    const flag = device ? `-s ${device}` : ''
+    const stdout = await adb(`${flag} shell dumpsys package ${packageName}`)
+    const match = stdout.match(/pkgFlags=\[([^\]]+)\]/)
+    if (!match) return 'unknown'
+    return match[1].includes('DEBUGGABLE') ? 'debug' : 'release'
+  } catch {
+    return 'unknown'
+  }
+}
+
 export async function getMemoryStats(
   packageName: string,
   device?: string
 ): Promise<MemoryStats & { _raw: string }> {
   const flag = device ? `-s ${device}` : ''
 
-  // Step 1 — global overview: extract total PSS and PID for our app
-  const overview = await adb(`${flag} shell dumpsys meminfo ${packageName}`)
+  // Run meminfo and build-type detection in parallel
+  const [overview, buildType] = await Promise.all([
+    adb(`${flag} shell dumpsys meminfo ${packageName}`),
+    detectBuildType(packageName, device),
+  ])
 
   // "    802,765K: app.puzzleplay.client (pid 10306 / activities)"
   const pssMatch = overview.match(new RegExp(`([\\d,]+)K:\\s+${escRe(packageName)}`, 'i'))
@@ -132,7 +150,7 @@ export async function getMemoryStats(
     ? `=== Overview ===\n${overview}\n\n=== Detail (pid ${pid}) ===\n${detail}`
     : overview
 
-  return { ...stats, _raw: rawLog }
+  return { ...stats, buildType, _raw: rawLog }
 }
 
 function parseMemoryStats(raw: string): MemoryStats {
@@ -154,9 +172,10 @@ function parseMemoryStats(raw: string): MemoryStats {
     return m ? parseInt(m[1], 10) : 0
   }
 
-  // TOTAL PSS — try both App Summary label and raw TOTAL row
+  // TOTAL PSS — try all known labels
   const totalPss =
     summary('TOTAL PSS') ||
+    summary('Total PSS') ||
     (() => {
       const m = raw.match(/^\s+TOTAL\s+(\d+)/im)
       return m ? parseInt(m[1], 10) : 0
@@ -181,11 +200,16 @@ function parseMemoryStats(raw: string): MemoryStats {
   const graphics =
     summary('Graphics') || table('EGL mtrack') + table('GL mtrack')
 
-  // System / Other
+  // "Other" = Private Other (app-controlled anonymous allocs: JIT, misc mmap).
+  // "System" in App Summary is proportional shared-library overhead — tracked
+  // separately as the discrepancy between totalPss and the sum of named buckets.
   const system =
-    summary('System') || summary('Private Other') || table('Unknown')
+    summary('Private Other') ||
+    summary('System') ||
+    table('Other') ||
+    table('Unknown')
 
-  return { totalPss, javaHeap, nativeHeap, code, stack, graphics, system, timestamp: new Date().toISOString() }
+  return { totalPss, javaHeap, nativeHeap, code, stack, graphics, system, buildType: 'unknown', timestamp: new Date().toISOString() }
 }
 
 // ── Performance ────────────────────────────────────
@@ -196,13 +220,29 @@ export async function resetGfxStats(packageName: string, device?: string): Promi
   await adb(`${flag} shell dumpsys gfxinfo ${packageName} reset`)
 }
 
+async function getRefreshRate(device?: string): Promise<number> {
+  try {
+    const flag = device ? `-s ${device}` : ''
+    const stdout = await adb(`${flag} shell dumpsys display`)
+    const m = stdout.match(/refreshRate=(\d+\.?\d*)/) ?? stdout.match(/\bfps=(\d+\.?\d*)/)
+    if (m) return Math.round(parseFloat(m[1]))
+    return 60
+  } catch {
+    return 60
+  }
+}
+
 export async function readPerformanceStats(
   packageName: string,
   device?: string
 ): Promise<PerformanceStats> {
   const flag = device ? `-s ${device}` : ''
-  const stdout = await adb(`${flag} shell dumpsys gfxinfo ${packageName}`)
-  return parsePerformanceStats(stdout)
+  const [stdout, buildType, refreshRate] = await Promise.all([
+    adb(`${flag} shell dumpsys gfxinfo ${packageName}`),
+    detectBuildType(packageName, device),
+    getRefreshRate(device),
+  ])
+  return parsePerformanceStats(stdout, buildType, refreshRate)
 }
 
 function num(raw: string, re: RegExp): number {
@@ -210,19 +250,48 @@ function num(raw: string, re: RegExp): number {
   return m ? parseInt(m[1].replace(/,/g, ''), 10) : 0
 }
 
-function parsePerformanceStats(raw: string): PerformanceStats {
+// Parse HISTOGRAM: 5ms=450 6ms=200 ...
+// Each "Xms=N" bucket = N frames whose render time was in that range.
+// Buckets: 5,6,7...30,32,34,36,38,40,42,44,46,48,53,57,61...
+// We use >32ms as "severe" (user-visible stutter) and 17-32ms as "mild" (borderline).
+function parseHistogram(raw: string): { mild: number; severe: number } {
+  const match = raw.match(/HISTOGRAM:\s+(.+)/m)
+  if (!match) return { mild: 0, severe: 0 }
+  let mild = 0
+  let severe = 0
+  for (const [, msStr, countStr] of match[1].matchAll(/(\d+)ms=(\d+)/g)) {
+    const ms    = parseInt(msStr, 10)
+    const count = parseInt(countStr, 10)
+    if (ms > 32)       severe += count
+    else if (ms >= 17) mild   += count
+  }
+  return { mild, severe }
+}
+
+function parsePerformanceStats(
+  raw: string,
+  buildType: PerformanceStats['buildType'] = 'unknown',
+  refreshRate = 60,
+): PerformanceStats {
   const jankyMatch = raw.match(/Janky frames:\s+([\d,]+)\s+\(([\d.]+)%\)/)
+  const { mild, severe } = parseHistogram(raw)
 
   return {
-    totalFrames:  num(raw, /Total frames rendered:\s+([\d,]+)/),
-    jankyFrames:  jankyMatch ? parseInt(jankyMatch[1].replace(/,/g, ''), 10) : 0,
-    jankyPercent: jankyMatch ? parseFloat(jankyMatch[2]) : 0,
-    p50: num(raw, /50th percentile:\s+(\d+)ms/),
-    p90: num(raw, /90th percentile:\s+(\d+)ms/),
-    p95: num(raw, /95th percentile:\s+(\d+)ms/),
-    p99: num(raw, /99th percentile:\s+(\d+)ms/),
-    slowUiThread: num(raw, /Number Slow UI thread:\s+([\d,]+)/),
-    missedVsync:  num(raw, /Number Missed Vsync:\s+([\d,]+)/),
-    timestamp:    new Date().toISOString(),
+    totalFrames:       num(raw, /Total frames rendered:\s+([\d,]+)/),
+    jankyFrames:       jankyMatch ? parseInt(jankyMatch[1].replace(/,/g, ''), 10) : 0,
+    jankyPercent:      jankyMatch ? parseFloat(jankyMatch[2]) : 0,
+    mildJankFrames:    mild,
+    severeJankFrames:  severe,
+    p50:  num(raw, /50th percentile:\s+(\d+)ms/),
+    p90:  num(raw, /90th percentile:\s+(\d+)ms/),
+    p95:  num(raw, /95th percentile:\s+(\d+)ms/),
+    p99:  num(raw, /99th percentile:\s+(\d+)ms/),
+    slowUiThread:      num(raw, /Number Slow UI thread:\s+([\d,]+)/),
+    missedVsync:       num(raw, /Number Missed Vsync:\s+([\d,]+)/),
+    slowBitmapUploads: num(raw, /Number Slow bitmap uploads:\s+([\d,]+)/),
+    slowDrawCommands:  num(raw, /Number Slow issue draw commands:\s+([\d,]+)/),
+    refreshRate,
+    buildType,
+    timestamp: new Date().toISOString(),
   }
 }
