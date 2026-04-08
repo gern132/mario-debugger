@@ -101,7 +101,7 @@ export function MemoryStatsScreen({ projectPath }: Props) {
   const [autoRefresh, setAutoRefresh] = useState(false)
 
   const rawRef     = useRef<string>('')
-  const measureRef = useRef<() => void>()
+  const measureRef = useRef<(() => void) | undefined>(undefined)
 
   useEffect(() => { void init() }, [])
 
