@@ -9,6 +9,7 @@ let stopped = false
 let idCounter = 0
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let activeRequester: Requester | null = null
+let sessionStartMs = 0
 
 export function stopCdp(): void {
   stopped = true
@@ -18,6 +19,7 @@ export function stopCdp(): void {
 
 export async function startCdp(win: BrowserWindow, wsUrl: string): Promise<void> {
   stopped = false
+  sessionStartMs = Date.now()
   connect(win, wsUrl, 1)
 }
 
@@ -227,10 +229,17 @@ async function handleConsoleCall(
   request: Requester,
   sourceMaps: Map<string, TraceMap>
 ): Promise<void> {
+  // Skip logs that were buffered before Stream was pressed.
+  // CDP timestamps may be in seconds or milliseconds — normalise to ms.
+  if (p.timestamp) {
+    const tsMs = p.timestamp > 1e12 ? p.timestamp : p.timestamp * 1000
+    if (tsMs < sessionStartMs) return
+  }
+
   const parts = await Promise.all(p.args.map(arg => resolveArg(arg, request)))
   const message = parts.join(' ')
   const { sourceFile, sourceLine } = extractLoc(p.stackTrace?.callFrames ?? [], sourceMaps)
-  const ts = p.timestamp ? new Date(p.timestamp) : new Date()
+  const ts = p.timestamp ? new Date(p.timestamp > 1e12 ? p.timestamp : p.timestamp * 1000) : new Date()
   emit(win, ts, cdpLevel(p.type), message, sourceFile, sourceLine)
 }
 
@@ -276,7 +285,7 @@ function emit(
   win: BrowserWindow, ts: Date, level: LogLevel,
   message: string, sourceFile?: string, sourceLine?: number
 ): void {
-  if (win.isDestroyed()) return
+  if (stopped || win.isDestroyed()) return
   win.webContents.send('cdp-log', {
     id: String(++idCounter),
     time: ts.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),

@@ -140,7 +140,7 @@ export function LogsScreen({ projectPath }: Props) {
 
   // ── Unified start / stop ──────────────────────────
   const start = async () => {
-    setEntries([])
+    bufferRef.current = []
     if (source === 'metro') {
       await startMetro()
     } else {
@@ -150,6 +150,7 @@ export function LogsScreen({ projectPath }: Props) {
   }
 
   const stop = async () => {
+    bufferRef.current = []
     if (source === 'metro') {
       await window.api.stopCdp()
     } else {
