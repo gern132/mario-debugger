@@ -16,6 +16,34 @@ function fmtDuration(ms: number): string {
   return `${(ms / 1000).toFixed(2)}s`
 }
 
+function fmtType(mimeType?: string, resourceType?: string): string {
+  if (!mimeType) {
+    const rt = resourceType?.toLowerCase()
+    return (rt === 'xhr' || rt === 'fetch') ? 'xhr' : ''
+  }
+  const slash = mimeType.indexOf('/')
+  return slash >= 0 ? mimeType.slice(slash + 1) : mimeType
+}
+
+function ResourceTypeIcon({ resourceType }: { resourceType?: string }) {
+  const type = resourceType?.toLowerCase()
+  if (type === 'xhr' || type === 'fetch') {
+    return (
+      <svg className="net-type-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <path d="M 6.5 1.5 A 5 5 0 0 1 11.5 6.5" stroke="#e07b3e" strokeWidth="1.4" strokeLinecap="round"/>
+        <path d="M 10.2 4.2 L 11.5 6.5 L 9.3 6.2" stroke="#e07b3e" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M 6.5 11.5 A 5 5 0 0 1 1.5 6.5" stroke="#e07b3e" strokeWidth="1.4" strokeLinecap="round"/>
+        <path d="M 2.8 8.8 L 1.5 6.5 L 3.7 6.8" stroke="#e07b3e" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  }
+  return (
+    <svg className="net-type-icon" width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="#636366" strokeWidth="1.2"/>
+    </svg>
+  )
+}
+
 function statusColor(status?: number, failed?: boolean): string {
   if (failed) return 'var(--red)'
   if (!status) return 'var(--text-dim)'
@@ -193,6 +221,7 @@ export function NetworkScreen() {
             <span className="net-col-path">Path</span>
             <span className="net-col-size">Size</span>
             <span className="net-col-time">Time</span>
+            <span className="net-col-type">Type</span>
           </div>
 
           {filtered.length === 0 && (
@@ -214,11 +243,15 @@ export function NetworkScreen() {
                 {entry.method}
               </span>
               <span className="net-col-host">{hostOf(entry.url)}</span>
-              <span className="net-col-path">{shortUrl(entry.url)}</span>
+              <span className="net-col-path">
+                <ResourceTypeIcon resourceType={entry.resourceType} />
+                <span>{shortUrl(entry.url)}</span>
+              </span>
               <span className="net-col-size">{entry.size != null ? fmtSize(entry.size) : '…'}</span>
               <span className="net-col-time">
                 {entry.duration != null ? fmtDuration(entry.duration) : entry.endTime ? '—' : '…'}
               </span>
+              <span className="net-col-type">{fmtType(entry.mimeType, entry.resourceType)}</span>
             </div>
           ))}
         </div>
