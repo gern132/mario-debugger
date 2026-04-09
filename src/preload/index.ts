@@ -80,6 +80,9 @@ contextBridge.exposeInMainWorld('api', {
   getNetworkResponseBody: (requestId: string): Promise<{ body: string; base64Encoded: boolean } | null> =>
     ipcRenderer.invoke('get-network-response-body', requestId),
 
+  openLogsWindow: (projectPath: string): Promise<void> =>
+    ipcRenderer.invoke('open-logs-window', projectPath),
+
   // CDP (Hermes inspector) — connection lives in main process (no Origin restrictions)
   startCdp: (wsUrl: string): Promise<void> =>
     ipcRenderer.invoke('start-cdp', wsUrl),

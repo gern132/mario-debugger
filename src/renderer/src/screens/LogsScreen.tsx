@@ -61,7 +61,9 @@ export function LogsScreen({ projectPath }: Props) {
   const idRef        = useRef(0)
 
   // Flush buffer → state every 100ms
-  // Auto-detect Metro port on mount
+  // Auto-detect Metro port, then auto-start
+  const autoStartedRef = useRef(false)
+
   useEffect(() => {
     setPortDetecting(true)
     window.api.findMetroPort()
@@ -104,6 +106,13 @@ export function LogsScreen({ projectPath }: Props) {
       void window.api.stopLogcat()
     }
   }, [])
+
+  // Auto-start Metro when port detection finishes
+  useEffect(() => {
+    if (portDetecting || autoStartedRef.current || source !== 'metro') return
+    autoStartedRef.current = true
+    void startMetro()
+  }, [portDetecting])
 
   // Auto-scroll
   useEffect(() => {
@@ -247,8 +256,8 @@ export function LogsScreen({ projectPath }: Props) {
           {streaming ? (
             <button className="btn-stop btn-sm" onClick={stop}>■ Stop</button>
           ) : (
-            <button className="btn-primary" onClick={start} disabled={source === 'logcat' && devices.length === 0}>
-              ▶ Stream
+            <button className="btn-ghost btn-sm" onClick={start} disabled={source === 'logcat' && devices.length === 0}>
+              ▶ Resume
             </button>
           )}
           <button className="btn-ghost" onClick={() => setEntries([])} disabled={entries.length === 0}>Clear</button>

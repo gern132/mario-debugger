@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { NetworkEntry, NetworkEvent } from '@shared/types'
 import { JsonNode } from '../components/JsonTree'
+import { LogsScreen } from './LogsScreen'
 
 // ── Helpers ───────────────────────────────────────
 
@@ -97,13 +98,28 @@ type DetailTab = 'headers' | 'request' | 'response'
 
 // ── Component ─────────────────────────────────────
 
-export function NetworkScreen() {
+interface Props {
+  projectPath: string
+}
+
+export function NetworkScreen({ projectPath }: Props) {
   const [entries, setEntries]     = useState<NetworkEntry[]>([])
   const [selected, setSelected]   = useState<NetworkEntry | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>('headers')
   const [search, setSearch]       = useState('')
   const [respBody, setRespBody]   = useState<ParsedBody | null>(null)
   const [loadingBody, setLoadingBody] = useState(false)
+
+  // Detail panel resize
+  const [detailPct, setDetailPct]     = useState(45)
+  const networkBodyRef = useRef<HTMLDivElement>(null)
+  const isDetailDragging = useRef(false)
+
+  // Console panel
+  const [showConsole, setShowConsole] = useState(true)
+  const [consolePct, setConsolePct]   = useState(38)
+  const containerRef  = useRef<HTMLDivElement>(null)
+  const isDragging    = useRef(false)
 
   useEffect(() => {
     const off = window.api.onNetworkEvent((event: NetworkEvent) => {
@@ -149,12 +165,53 @@ export function NetworkScreen() {
     return off
   }, [])
 
-  // Update selected entry when entries change
   useEffect(() => {
     if (selected) {
       setSelected(prev => entries.find(e => e.id === prev?.id) ?? prev)
     }
   }, [entries])
+
+  const onDividerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    isDragging.current = true
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const pct = ((rect.bottom - ev.clientY) / rect.height) * 100
+      setConsolePct(Math.max(15, Math.min(70, pct)))
+    }
+
+    const onMouseUp = () => {
+      isDragging.current = false
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }
+
+  const onDetailDividerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    isDetailDragging.current = true
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDetailDragging.current || !networkBodyRef.current) return
+      const rect = networkBodyRef.current.getBoundingClientRect()
+      const pct = ((rect.right - ev.clientX) / rect.width) * 100
+      setDetailPct(Math.max(20, Math.min(75, pct)))
+    }
+
+    const onMouseUp = () => {
+      isDetailDragging.current = false
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }
 
   const fetchResponseBody = async (entry: NetworkEntry) => {
     setRespBody(null)
@@ -193,9 +250,8 @@ export function NetworkScreen() {
     return e.url.toLowerCase().includes(q) || e.method.toLowerCase().includes(q)
   })
 
-  return (
+  const networkPanel = (
     <div className="network-screen">
-      {/* Toolbar */}
       <div className="network-toolbar">
         <button className="btn-ghost btn-sm" onClick={() => { setEntries([]); setSelected(null) }}>
           Clear
@@ -208,12 +264,20 @@ export function NetworkScreen() {
           spellCheck={false}
         />
         <span className="network-count">{filtered.length} requests</span>
+        <button
+          className={`btn-ghost btn-sm${showConsole ? ' active' : ''}`}
+          onClick={() => setShowConsole(v => !v)}
+          title={showConsole ? 'Hide console' : 'Show console'}
+        >
+          Console
+        </button>
       </div>
 
-      <div className={`network-body${selected ? ' has-detail' : ''}`}>
-        {/* Request list */}
-        <div className="network-list">
-          {/* Header row */}
+      <div className="network-body" ref={networkBodyRef}>
+        <div
+          className="network-list"
+          style={selected ? { flex: `0 0 ${100 - detailPct}%`, minWidth: 120 } : undefined}
+        >
           <div className="net-row net-header">
             <span className="net-col-status">Status</span>
             <span className="net-col-method">Method</span>
@@ -245,7 +309,7 @@ export function NetworkScreen() {
               <span className="net-col-host">{hostOf(entry.url)}</span>
               <span className="net-col-path">
                 <ResourceTypeIcon resourceType={entry.resourceType} />
-                <span>{shortUrl(entry.url)}</span>
+                <span className="net-path-text" title={shortUrl(entry.url)}>{shortUrl(entry.url)}</span>
               </span>
               <span className="net-col-size">{entry.size != null ? fmtSize(entry.size) : '…'}</span>
               <span className="net-col-time">
@@ -256,9 +320,18 @@ export function NetworkScreen() {
           ))}
         </div>
 
-        {/* Detail panel */}
         {selected && (
-          <div className="net-detail">
+          <div
+            className="net-detail-divider"
+            onMouseDown={onDetailDividerMouseDown}
+            title="Drag to resize"
+          >
+            <div className="net-detail-divider-handle" />
+          </div>
+        )}
+
+        {selected && (
+          <div className="net-detail" style={{ flex: `0 0 ${detailPct}%`, minWidth: 160 }}>
             <div className="net-detail-header">
               <span className="net-detail-method" style={{ color: methodColor(selected.method) }}>{selected.method}</span>
               <span className="net-detail-url">{selected.url}</span>
@@ -331,6 +404,43 @@ export function NetworkScreen() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="network-with-console" ref={containerRef}>
+      <div style={{
+        flex: showConsole ? `0 0 ${100 - consolePct}%` : '1',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+      }}>
+        {networkPanel}
+      </div>
+
+      {/* Divider — only visible when console is open */}
+      <div
+        className="console-divider"
+        onMouseDown={onDividerMouseDown}
+        style={{ display: showConsole ? 'flex' : 'none' }}
+      >
+        <div className="console-divider-handle" />
+      </div>
+
+      {/* Console pane — always mounted, hidden when closed to keep CDP alive */}
+      <div
+        className="console-pane"
+        style={{ flex: 1, minHeight: 0, display: showConsole ? 'flex' : 'none' }}
+      >
+        <div className="console-header">
+          <span className="console-label">Console</span>
+          <button className="console-close-btn" onClick={() => setShowConsole(false)} title="Close console">✕</button>
+        </div>
+        <div className="console-body">
+          <LogsScreen projectPath={projectPath} />
+        </div>
       </div>
     </div>
   )

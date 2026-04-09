@@ -30,8 +30,10 @@ export function Dashboard({ project, onChangeProject }: Props) {
   const [filter, setFilter]   = useState<Filter>('all')
   const [editor, setEditorState] = useState<'vscode' | 'webstorm'>('vscode')
   const [toast, setToast]     = useState('')
-  const [mainTab, setMainTab] = useState<MainTab>('logs')
-  const [logsEverShown, setLogsEverShown] = useState(true) // logs is default tab
+  const [mainTab, setMainTab] = useState<MainTab>('network')
+  const [logsEverShown, setLogsEverShown] = useState(false)
+  // network is default tab — keep it mounted permanently once shown
+  const [networkEverShown, setNetworkEverShown] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
@@ -105,8 +107,8 @@ export function Dashboard({ project, onChangeProject }: Props) {
 
       <div className="main-tabs">
         {([
-          ['logs',        'Logs'],
           ['network',     'Network'],
+          ['logs',        'Logs'],
           ['analysis',    'Code Analysis'],
           ['memory',      'Memory'],
           ['performance', 'Performance'],
@@ -115,7 +117,8 @@ export function Dashboard({ project, onChangeProject }: Props) {
             key={tab}
             className={`main-tab${mainTab === tab ? ' active' : ''}`}
             onClick={() => {
-              if (tab === 'logs') setLogsEverShown(true)
+              if (tab === 'logs')    setLogsEverShown(true)
+              if (tab === 'network') setNetworkEverShown(true)
               setMainTab(tab)
             }}
           >
@@ -124,7 +127,11 @@ export function Dashboard({ project, onChangeProject }: Props) {
         ))}
       </div>
 
-      {mainTab === 'network' && <NetworkScreen />}
+      {networkEverShown && (
+        <div style={{ display: mainTab === 'network' ? 'contents' : 'none' }}>
+          <NetworkScreen projectPath={project.path} />
+        </div>
+      )}
 
       {mainTab === 'memory' && (
         <MemoryStatsScreen projectPath={project.path} />

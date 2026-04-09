@@ -1501,9 +1501,27 @@ button { font-family: inherit; }
   overflow: hidden;
 }
 
-.network-body.has-detail .network-list {
-  flex: 0 0 55%;
-  border-right: 1px solid var(--border);
+/* Vertical divider between list and detail */
+.net-detail-divider {
+  flex-shrink: 0;
+  width: 5px;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  z-index: 5;
+}
+.net-detail-divider:hover .net-detail-divider-handle,
+.net-detail-divider:active .net-detail-divider-handle {
+  background: var(--blue);
+}
+.net-detail-divider-handle {
+  width: 3px;
+  height: 40px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.15s;
 }
 
 .network-list {
@@ -1552,7 +1570,7 @@ button { font-family: inherit; }
 .net-col-method { font-weight: 600; flex-shrink: 0; }
 .net-col-host   { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .net-col-path   { display: flex; align-items: center; gap: 5px; overflow: hidden; white-space: nowrap; color: var(--text); }
-.net-col-path > span { overflow: hidden; text-overflow: ellipsis; }
+.net-path-text  { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; }
 .net-col-size   { text-align: right; color: var(--text-secondary); flex-shrink: 0; }
 .net-col-time   { text-align: right; color: var(--text-secondary); flex-shrink: 0; }
 .net-col-type   { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; font-size: 10px; }
@@ -1898,4 +1916,183 @@ html[data-theme="light"], :root[data-theme="light"], [data-theme="light"] {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* ─── DevTools split layout ─── */
+.devtools-split {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.devtools-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.devtools-logs-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.devtools-logs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  height: 30px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.devtools-pane-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.devtools-popout-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.devtools-popout-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.devtools-logs-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Divider / resize handle */
+.devtools-divider {
+  flex-shrink: 0;
+  height: 5px;
+  background: transparent;
+  cursor: row-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.devtools-divider:hover .devtools-divider-handle,
+.devtools-divider:active .devtools-divider-handle {
+  background: var(--blue);
+}
+.devtools-divider-handle {
+  width: 40px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+
+/* Standalone logs window */
+.logs-window-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.logs-window-root > .logs-screen {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ─── Network + Console split ─── */
+.network-with-console {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.console-divider {
+  flex-shrink: 0;
+  height: 5px;
+  cursor: row-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  z-index: 5;
+}
+.console-divider:hover .console-divider-handle,
+.console-divider:active .console-divider-handle {
+  background: var(--blue);
+}
+.console-divider-handle {
+  width: 40px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+
+.console-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+}
+
+.console-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  height: 28px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.console-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.console-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+}
+.console-close-btn:hover { color: var(--text); background: var(--surface-hover); }
+
+.console-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
 }

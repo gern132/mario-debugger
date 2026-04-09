@@ -104,6 +104,35 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()
 })
 
+ipcMain.handle('open-logs-window', (_event, projectPath: string) => {
+  const logsWin = new BrowserWindow({
+    width: 960,
+    height: 420,
+    minWidth: 600,
+    minHeight: 260,
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 16, y: 12 },
+    backgroundColor: '#1c1c1e',
+    webPreferences: {
+      preload: path.join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  })
+
+  const encoded = encodeURIComponent(projectPath)
+
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    void logsWin.loadURL(
+      `${process.env['ELECTRON_RENDERER_URL']}?logsWindow=1&projectPath=${encoded}`
+    )
+  } else {
+    void logsWin.loadFile(path.join(__dirname, '../renderer/index.html'), {
+      query: { logsWindow: '1', projectPath },
+    })
+  }
+})
+
 ipcMain.handle('select-project-folder', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory'],

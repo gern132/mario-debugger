@@ -32,6 +32,7 @@ declare global {
       onCdpEvent: (cb: (event: 'connected' | 'closed' | 'error' | 'reconnecting', detail?: string) => void) => () => void
       onNetworkEvent: (cb: (event: NetworkEvent) => void) => () => void
       getNetworkResponseBody: (requestId: string) => Promise<{ body: string; base64Encoded: boolean } | null>
+      openLogsWindow: (projectPath: string) => Promise<void>
     }
   }
 }
