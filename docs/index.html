@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mario Debugger — React Native DevTools for macOS</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #1c1c1e;
+      --surface: #2c2c2e;
+      --text: #f2f2f7;
+      --text-secondary: #8e8e93;
+      --blue: #0a84ff;
+      --green: #30d158;
+      --border: rgba(255,255,255,0.08);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 80px 24px 60px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .icon { font-size: 72px; margin-bottom: 24px; line-height: 1; }
+
+    h1 {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .tagline {
+      font-size: 20px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 40px;
+      max-width: 540px;
+    }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--blue);
+      color: #fff;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    .download-btn:hover { opacity: 0.85; }
+
+    .download-note {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* ── Features ── */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 0 24px;
+    }
+
+    .feature {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .feature-icon { font-size: 28px; margin-bottom: 12px; }
+
+    .feature h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .feature p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    footer a { color: var(--blue); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <section class="hero">
+    <span class="icon">🍄</span>
+    <h1>Mario Debugger</h1>
+    <p class="tagline">
+      React Native DevTools for macOS. Logs, network inspector,
+      memory profiling and code analysis — in one app.
+    </p>
+    <a class="download-btn" id="download-link" href="https://github.com/OWNER/REPO/releases/latest">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 16l-6-6h4V4h4v6h4l-6 6zm-7 4h14v-2H5v2z"/>
+      </svg>
+      Download for macOS
+    </a>
+    <p class="download-note">macOS 12+ · Free · Open Source</p>
+  </section>
+
+  <section class="features">
+    <div class="feature">
+      <div class="feature-icon">📡</div>
+      <h3>Network Inspector</h3>
+      <p>Capture HTTP requests in real time via CDP. View headers, request and response bodies.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🖥️</div>
+      <h3>Console Logs</h3>
+      <p>Stream Metro (Hermes) logs with source links. Filter by level, search, auto-scroll.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🧠</div>
+      <h3>Memory Profiling</h3>
+      <p>Java Heap, Native Heap, Graphics and more via <code>dumpsys meminfo</code>.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⚡</div>
+      <h3>Performance</h3>
+      <p>Frame render times, janky frames, p50/p90/p99 percentiles via <code>dumpsys gfxinfo</code>.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔍</div>
+      <h3>Code Analysis</h3>
+      <p>Static checks for memory leaks, console logs, async effects and more.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🎨</div>
+      <h3>Dark &amp; Light</h3>
+      <p>Native macOS design with system theme support.</p>
+    </div>
+  </section>
+
+  <footer>
+    <a href="https://github.com/OWNER/REPO">View on GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/OWNER/REPO/releases">All Releases</a>
+  </footer>
+
+  <script>
+    // Auto-update download link to latest release .dmg
+    fetch('https://api.github.com/repos/OWNER/REPO/releases/latest')
+      .then(r => r.json())
+      .then(data => {
+        const dmg = data.assets?.find(a => a.name.endsWith('.dmg'))
+        if (dmg) {
+          document.getElementById('download-link').href = dmg.browser_download_url
+        }
+      })
+      .catch(() => {})
+  </script>
+
+</body>
+</html>
