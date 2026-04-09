@@ -133,7 +133,7 @@
       </svg>
       Download for macOS
     </a>
-    <p class="download-note">macOS 12+ · Free · Open Source</p>
+    <p class="download-note">macOS 12+ · Free · Open Source · <span id="version"></span></p>
   </section>
 
   <section class="features">
@@ -183,6 +183,9 @@
         const dmg = data.assets?.find(a => a.name.endsWith('.dmg'))
         if (dmg) {
           document.getElementById('download-link').href = dmg.browser_download_url
+        }
+        if (data.tag_name) {
+          document.getElementById('version').textContent = data.tag_name
         }
       })
       .catch(() => {})
