@@ -134,6 +134,12 @@
       Download for macOS
     </a>
     <p class="download-note">macOS 12+ · Free · Open Source · <span id="version"></span></p>
+    <details style="margin-top:16px;max-width:480px;text-align:left;color:var(--text-secondary);font-size:13px;line-height:1.6">
+      <summary style="cursor:pointer;color:var(--blue)">macOS says the app is damaged?</summary>
+      <p style="margin-top:8px">The app is not notarized with Apple. Run this in Terminal after downloading:</p>
+      <pre style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;overflow-x:auto" id="xattr-cmd">xattr -cr ~/Downloads/Mario-arm64.dmg</pre>
+      <p style="margin-top:8px">Then open the DMG again.</p>
+    </details>
   </section>
 
   <section class="features">
@@ -186,6 +192,9 @@
         }
         if (data.tag_name) {
           document.getElementById('version').textContent = data.tag_name
+        }
+        if (dmg) {
+          document.getElementById('xattr-cmd').textContent = `xattr -cr ~/Downloads/${dmg.name}`
         }
       })
       .catch(() => {})
