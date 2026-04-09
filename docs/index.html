@@ -127,7 +127,7 @@
       React Native DevTools for macOS. Logs, network inspector,
       memory profiling and code analysis — in one app.
     </p>
-    <a class="download-btn" id="download-link" href="https://github.com/OWNER/REPO/releases/latest">
+    <a class="download-btn" id="download-link" href="https://github.com/gern132/Mario/releases/latest">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 16l-6-6h4V4h4v6h4l-6 6zm-7 4h14v-2H5v2z"/>
       </svg>
@@ -170,14 +170,14 @@
   </section>
 
   <footer>
-    <a href="https://github.com/OWNER/REPO">View on GitHub</a>
+    <a href="https://github.com/gern132/Mario">View on GitHub</a>
     &nbsp;·&nbsp;
-    <a href="https://github.com/OWNER/REPO/releases">All Releases</a>
+    <a href="https://github.com/gern132/Mario/releases">All Releases</a>
   </footer>
 
   <script>
     // Auto-update download link to latest release .dmg
-    fetch('https://api.github.com/repos/OWNER/REPO/releases/latest')
+    fetch('https://api.github.com/repos/gern132/Mario/releases/latest')
       .then(r => r.json())
       .then(data => {
         const dmg = data.assets?.find(a => a.name.endsWith('.dmg'))
