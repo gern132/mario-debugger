@@ -1,7 +1,8 @@
 node_modules/
 dist/
 out/
-build/
+build/*
+!build/icon.png
 .idea/
 *.tsbuildinfo
 5051
