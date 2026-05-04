@@ -87,6 +87,7 @@ export type NetworkEntry = {
   size?: number
   failed?: boolean
   errorText?: string
+  richResponse?: boolean
 }
 
 export type PerformanceStats = {

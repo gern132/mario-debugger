@@ -156,12 +156,12 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px 0 82px;
-  height: 50px;
+  padding: 0 12px 0 82px;
+  height: 40px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   -webkit-app-region: drag;
-  gap: 12px;
+  gap: 8px;
 }
 
 .project-info {
@@ -194,19 +194,19 @@ button { font-family: inherit; }
 
 /* ─── Sidebar ─── */
 .sidebar {
-  width: 148px;
+  width: 136px;
   flex-shrink: 0;
-  padding: 16px 10px;
+  padding: 10px 8px;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 5px;
 }
 
 .stat-card {
   background: var(--surface);
   border-radius: var(--radius-sm);
-  padding: 11px 12px;
+  padding: 7px 10px;
   border-left: 3px solid transparent;
 }
 
@@ -216,10 +216,10 @@ button { font-family: inherit; }
 
 .stat-value {
   display: block;
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -240,18 +240,18 @@ button { font-family: inherit; }
 .main-tabs {
   display: flex;
   gap: 2px;
-  padding: 8px 16px 0;
+  padding: 4px 12px 0;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
 
 .main-tab {
-  padding: 6px 16px;
+  padding: 4px 12px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   border-bottom: 2px solid transparent;
@@ -278,8 +278,8 @@ button { font-family: inherit; }
 .device-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 7px 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -339,7 +339,7 @@ button { font-family: inherit; }
 .stats-body {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 20px 32px;
+  padding: 12px 14px 20px;
 }
 
 /* Total PSS hero */
@@ -348,8 +348,8 @@ button { font-family: inherit; }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -546,8 +546,8 @@ button { font-family: inherit; }
   display: flex;
   align-items: baseline;
   gap: 6px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -776,8 +776,8 @@ button { font-family: inherit; }
 
 .filter-bar {
   display: flex;
-  gap: 5px;
-  padding: 10px 16px;
+  gap: 4px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   background: var(--bg);
@@ -785,12 +785,12 @@ button { font-family: inherit; }
 }
 
 .filter-btn {
-  padding: 4px 13px;
+  padding: 3px 10px;
   border-radius: 20px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.12s;
   white-space: nowrap;
@@ -941,7 +941,7 @@ button { font-family: inherit; }
 
 /* ─── Buttons ─── */
 .btn-primary {
-  padding: 5px 14px;
+  padding: 4px 10px;
   background: var(--blue);
   color: #fff;
   border: none;
@@ -956,7 +956,7 @@ button { font-family: inherit; }
 .btn-primary:disabled, .btn-primary.running { opacity: 0.55; cursor: not-allowed; }
 
 .btn-ghost {
-  padding: 5px 12px;
+  padding: 4px 10px;
   background: var(--surface);
   color: var(--text-secondary);
   border: 1px solid var(--border);
@@ -970,11 +970,11 @@ button { font-family: inherit; }
 
 /* ─── Session config ─── */
 .session-config {
-  padding: 14px 16px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 7px;
   flex-shrink: 0;
 }
 
@@ -982,7 +982,7 @@ button { font-family: inherit; }
 .duration-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .mode-toggle,
@@ -993,12 +993,12 @@ button { font-family: inherit; }
 
 .mode-btn,
 .duration-btn {
-  padding: 4px 14px;
+  padding: 3px 10px;
   border-radius: 20px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.12s;
 }
@@ -1021,16 +1021,16 @@ button { font-family: inherit; }
 
 .btn-start {
   align-self: flex-start;
-  padding: 6px 20px;
-  font-size: 13px;
+  padding: 4px 14px;
+  font-size: 12px;
 }
 
 /* ─── Recording state ─── */
 .session-recording {
-  padding: 20px 16px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
 }
@@ -1099,12 +1099,12 @@ button { font-family: inherit; }
 
 .btn-stop {
   align-self: flex-start;
-  padding: 6px 20px;
+  padding: 4px 14px;
   background: var(--red);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: opacity 0.12s;
@@ -1181,18 +1181,18 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 6px 16px 0;
+  padding: 3px 12px 0;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
 
 .source-tab {
-  padding: 5px 14px;
+  padding: 3px 10px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   border-bottom: 2px solid transparent;
@@ -1219,8 +1219,8 @@ button { font-family: inherit; }
 .logs-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
+  gap: 7px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -1242,22 +1242,22 @@ button { font-family: inherit; }
 }
 
 .btn-sm {
-  padding: 5px 12px;
-  font-size: 12px;
+  padding: 4px 10px;
+  font-size: 11px;
 }
 
 .logs-level-bar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 16px;
+  gap: 3px;
+  padding: 4px 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
 
 .log-level-btn {
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: 20px;
   border: 1px solid var(--border);
   background: transparent;
@@ -1474,13 +1474,14 @@ button { font-family: inherit; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 .network-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 6px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -1560,11 +1561,29 @@ button { font-family: inherit; }
   position: sticky;
   top: 0;
   z-index: 1;
+  min-height: 20px !important;
 }
+
+.net-host-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 9px;
+  padding: 0;
+  text-align: left;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color 0.12s;
+}
+.net-host-toggle:hover { color: var(--text); }
 
 .net-entry:hover { background: rgba(255,255,255,0.03); }
 .net-entry.selected { background: rgba(10,132,255,0.1); }
 .net-entry.failed { background: rgba(255,69,58,0.05); }
+.net-entry.rich { border-left: 2px solid rgba(52,211,153,0.6); }
+.net-entry.rich.selected { border-left-color: rgba(52,211,153,0.9); }
 
 .net-col-status { text-align: center; flex-shrink: 0; }
 .net-col-method { font-weight: 600; flex-shrink: 0; }
@@ -1783,8 +1802,8 @@ html[data-theme="light"], :root[data-theme="light"], [data-theme="light"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -2095,4 +2114,62 @@ html[data-theme="light"], :root[data-theme="light"], [data-theme="light"] {
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+}
+
+/* ─── Reconnect modal ─── */
+.reconnect-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  backdrop-filter: blur(2px);
+}
+
+.reconnect-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 220px;
+  text-align: center;
+}
+
+.reconnect-icon {
+  font-size: 28px;
+  line-height: 1;
+  margin-bottom: 4px;
+  opacity: 0.7;
+}
+
+.reconnect-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.reconnect-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+/* ─── Settings toggle row ─── */
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.settings-toggle-label {
+  font-size: 12px;
+  color: var(--text);
 }

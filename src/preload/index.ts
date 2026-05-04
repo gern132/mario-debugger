@@ -36,6 +36,12 @@ contextBridge.exposeInMainWorld('api', {
   setNetworkPorts: (ports: number[]): Promise<void> =>
     ipcRenderer.invoke('set-network-ports', ports),
 
+  getAutoReconnect: (): Promise<boolean> =>
+    ipcRenderer.invoke('get-auto-reconnect'),
+
+  setAutoReconnect: (v: boolean): Promise<void> =>
+    ipcRenderer.invoke('set-auto-reconnect', v),
+
   // Device
   getAdbDevices: (): Promise<string[]> =>
     ipcRenderer.invoke('get-adb-devices'),

@@ -61,6 +61,8 @@ import {
   setTheme,
   getNetworkPorts,
   setNetworkPorts,
+  getAutoReconnect,
+  setAutoReconnect,
 } from './store'
 import { startLogcat, stopLogcat } from './device/logcat'
 import { startCdp, stopCdp, getNetworkResponseBody } from './device/cdp'
@@ -173,6 +175,8 @@ ipcMain.handle('get-theme', async () => getTheme())
 ipcMain.handle('set-theme', async (_event, theme: 'dark' | 'light') => setTheme(theme))
 ipcMain.handle('get-network-ports', async () => getNetworkPorts())
 ipcMain.handle('set-network-ports', async (_event, ports: number[]) => setNetworkPorts(ports))
+ipcMain.handle('get-auto-reconnect', async () => getAutoReconnect())
+ipcMain.handle('set-auto-reconnect', async (_event, v: boolean) => setAutoReconnect(v))
 
 // ── Device / ADB handlers ──────────────────────────
 

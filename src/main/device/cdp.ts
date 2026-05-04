@@ -7,31 +7,25 @@ import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping'
 let ws: WebSocket | null = null
 let stopped = false
 let idCounter = 0
-let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let activeRequester: Requester | null = null
 let sessionStartMs = 0
 
 export function stopCdp(): void {
   stopped = true
-  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
   if (ws) { ws.terminate(); ws = null }
 }
 
 export async function startCdp(win: BrowserWindow, wsUrl: string): Promise<void> {
+  stopCdp()   // terminate any existing connection first
   stopped = false
   sessionStartMs = Date.now()
-  connect(win, wsUrl, 1)
+  connect(win, wsUrl)
 }
 
 type Requester = <T>(method: string, params?: Record<string, unknown>) => Promise<T>
 
-function connect(win: BrowserWindow, wsUrl: string, attempt: number): void {
+function connect(win: BrowserWindow, wsUrl: string): void {
   if (stopped || win.isDestroyed()) return
-
-  if (attempt > 5) {
-    win.webContents.send('cdp-error', 'Cannot connect to Hermes inspector after 5 attempts. Try Logcat mode.')
-    return
-  }
 
   const socket = new WebSocket(wsUrl)
   ws = socket
@@ -102,17 +96,14 @@ function connect(win: BrowserWindow, wsUrl: string, attempt: number): void {
     if (!win.isDestroyed()) win.webContents.send('cdp-error', err.message)
   })
 
-  socket.on('close', (code: number, reason: Buffer) => {
+  socket.on('close', (code: number) => {
     ws = null
     pending.clear()
     activeRequester = null
     if (stopped || win.isDestroyed()) return
-    const reasonStr = reason.toString()
-    if (code !== 1000) console.log(`[CDP] Closed code=${code}${reasonStr ? ' ' + reasonStr : ''}`)
-    win.webContents.send('cdp-reconnecting', `Reconnecting (attempt ${attempt + 1}, code ${code})…`)
-    reconnectTimer = setTimeout(() => {
-      if (!stopped && !win.isDestroyed()) connect(win, wsUrl, attempt + 1)
-    }, Math.min(1000 * attempt, 5000))
+    if (code !== 1000) console.log(`[CDP] Closed code=${code}`)
+    win.webContents.send('cdp-closed')
+    // Reconnect is handled by the renderer
   })
 }
 

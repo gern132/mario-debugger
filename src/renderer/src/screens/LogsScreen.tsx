@@ -4,6 +4,7 @@ import { LogMessage } from '../components/JsonTree'
 
 interface Props {
   projectPath: string
+  onClose?: () => void
 }
 
 const MAX_ENTRIES = 2000
@@ -35,7 +36,7 @@ function parseLocFromMessage(msg: string): { file: string; line: number } | null
 }
 
 
-export function LogsScreen({ projectPath }: Props) {
+export function LogsScreen({ projectPath, onClose }: Props) {
   // ── Source: metro (CDP) or logcat ─────────────────
   const [source, setSource]           = useState<'metro' | 'logcat'>('metro')
   const [metroPort, setMetroPort]     = useState(8081)
@@ -47,18 +48,22 @@ export function LogsScreen({ projectPath }: Props) {
   const [logcatMode, setLogcatMode]   = useState<LogMode>('rn')
 
   // ── Shared ────────────────────────────────────────
-  const [streaming, setStreaming]     = useState(false)
-  const [cdpError, setCdpError]       = useState<string | null>(null)
-  const [entries, setEntries]         = useState<LogEntry[]>([])
-  const [levelFilter, setLevelFilter] = useState<LogLevel | 'all'>('all')
-  const [search, setSearch]           = useState('')
-  const [autoScroll, setAutoScroll]   = useState(true)
-  const [editor, setEditor]           = useState<'vscode' | 'webstorm'>('vscode')
+  const [streaming, setStreaming]       = useState(false)
+  const [cdpError, setCdpError]         = useState<string | null>(null)
+  const [disconnected, setDisconnected] = useState(false)
+  const [autoReconnect, setAutoReconnect] = useState(false)
+  const [entries, setEntries]           = useState<LogEntry[]>([])
+  const [levelFilter, setLevelFilter]   = useState<LogLevel | 'all'>('all')
+  const [search, setSearch]             = useState('')
+  const [autoScroll, setAutoScroll]     = useState(true)
+  const [editor, setEditor]             = useState<'vscode' | 'webstorm'>('vscode')
 
-  const bottomRef    = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const bufferRef    = useRef<LogEntry[]>([])
-  const idRef        = useRef(0)
+  const bottomRef       = useRef<HTMLDivElement>(null)
+  const containerRef    = useRef<HTMLDivElement>(null)
+  const bufferRef       = useRef<LogEntry[]>([])
+  const idRef           = useRef(0)
+  const userStoppedRef  = useRef(false)
+  const autoReconnectRef = useRef(false)
 
   // Flush buffer → state every 100ms
   // Auto-detect Metro port, then auto-start
@@ -73,6 +78,10 @@ export function LogsScreen({ projectPath }: Props) {
 
   useEffect(() => {
     window.api.getEditorPreference().then(setEditor)
+    window.api.getAutoReconnect().then(v => {
+      setAutoReconnect(v)
+      autoReconnectRef.current = v
+    })
     window.api.getAdbDevices().then(devs => {
       setDevices(devs)
       if (devs[0]) setDevice(devs[0])
@@ -82,10 +91,23 @@ export function LogsScreen({ projectPath }: Props) {
     const offCdpLog = window.api.onCdpLog(e => { bufferRef.current.push(e) })
 
     const offCdpEvent = window.api.onCdpEvent((event, detail) => {
-      if (event === 'connected')    { setStreaming(true);  setCdpError(null) }
-      if (event === 'closed')       setStreaming(false)
-      if (event === 'reconnecting') setCdpError(detail ?? 'Reconnecting…')
-      if (event === 'error')        { setStreaming(false); setCdpError(detail ?? 'CDP error') }
+      if (event === 'connected') {
+        setStreaming(true)
+        setCdpError(null)
+        setDisconnected(false)
+        userStoppedRef.current = false
+      }
+      if (event === 'closed') {
+        setStreaming(false)
+        if (!userStoppedRef.current) setDisconnected(true)
+        else setDisconnected(false)
+        userStoppedRef.current = false
+      }
+      if (event === 'error') {
+        setStreaming(false)
+        setCdpError(detail ?? 'CDP error')
+        setDisconnected(true)
+      }
     })
 
     const timer = setInterval(() => {
@@ -128,6 +150,8 @@ export function LogsScreen({ projectPath }: Props) {
   // ── Metro / CDP start — connection lives in main process (no Origin issue) ──
   const startMetro = useCallback(async () => {
     setCdpError(null)
+    setDisconnected(false)
+    userStoppedRef.current = false
     const raw = await window.api.getCdpTargets(metroPort)
     const targets = raw as Array<{ webSocketDebuggerUrl?: string; title?: string }>
 
@@ -147,6 +171,13 @@ export function LogsScreen({ projectPath }: Props) {
     // streaming state is driven by cdp-connected / cdp-closed / cdp-error events
   }, [metroPort])
 
+  // Auto-reconnect when disconnected and setting is enabled
+  useEffect(() => {
+    if (!disconnected || !autoReconnect) return
+    const t = setTimeout(() => void startMetro(), 3000)
+    return () => clearTimeout(t)
+  }, [disconnected, autoReconnect, startMetro])
+
   // ── Unified start / stop ──────────────────────────
   const start = async () => {
     bufferRef.current = []
@@ -159,6 +190,7 @@ export function LogsScreen({ projectPath }: Props) {
   }
 
   const stop = async () => {
+    userStoppedRef.current = true
     bufferRef.current = []
     if (source === 'metro') {
       await window.api.stopCdp()
@@ -166,6 +198,7 @@ export function LogsScreen({ projectPath }: Props) {
       await window.api.stopLogcat()
     }
     setStreaming(false)
+    setDisconnected(false)
   }
 
   const switchSource = async (s: 'metro' | 'logcat') => {
@@ -205,6 +238,9 @@ export function LogsScreen({ projectPath }: Props) {
             ? 'Source location for every log'
             : 'All device logs including native'}
         </span>
+        {onClose && (
+          <button className="console-close-btn" onClick={onClose} style={{ marginLeft: 'auto' }} title="Close console">✕</button>
+        )}
       </div>
 
       {/* Controls */}
@@ -255,6 +291,8 @@ export function LogsScreen({ projectPath }: Props) {
         <div className="logs-actions">
           {streaming ? (
             <button className="btn-stop btn-sm" onClick={stop}>■ Stop</button>
+          ) : disconnected ? (
+            <button className="btn-primary btn-sm" onClick={() => void startMetro()}>⚡ Reconnect</button>
           ) : (
             <button className="btn-ghost btn-sm" onClick={start} disabled={source === 'logcat' && devices.length === 0}>
               ▶ Resume

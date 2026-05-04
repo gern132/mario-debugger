@@ -9,14 +9,16 @@ interface Props {
 const DEFAULT_PORTS = [8081, 8082, 8083, 19000, 19001, 19006]
 
 export function SettingsPanel({ onClose }: Props) {
-  const [theme, setThemeState]   = useState<Theme>('dark')
-  const [ports, setPorts]         = useState<number[]>(DEFAULT_PORTS)
-  const [portInput, setPortInput] = useState('')
+  const [theme, setThemeState]         = useState<Theme>('dark')
+  const [ports, setPorts]               = useState<number[]>(DEFAULT_PORTS)
+  const [portInput, setPortInput]       = useState('')
+  const [autoReconnect, setAutoReconnect] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     window.api.getTheme().then(setThemeState)
     window.api.getNetworkPorts().then(setPorts)
+    window.api.getAutoReconnect().then(setAutoReconnect)
   }, [])
 
   const applyTheme = async (t: Theme) => {
@@ -74,9 +76,27 @@ export function SettingsPanel({ onClose }: Props) {
           </div>
         </div>
 
-        {/* ── Network ports ── */}
+        {/* ── Network ── */}
         <div className="settings-section">
-          <div className="settings-section-label">Metro / CDP Ports</div>
+          <div className="settings-section-label">Network</div>
+          <label className="settings-toggle-row">
+            <span className="settings-toggle-label">Auto-reconnect to Metro</span>
+            <input
+              type="checkbox"
+              checked={autoReconnect}
+              onChange={e => {
+                const v = e.target.checked
+                setAutoReconnect(v)
+                void window.api.setAutoReconnect(v)
+              }}
+            />
+          </label>
+          <p className="settings-hint">Automatically reconnect when Metro CDP connection drops</p>
+        </div>
+
+        {/* ── Metro / CDP ports ── */}
+        <div className="settings-section">
+          <div className="settings-section-label">Metro / CDP ports</div>
           <p className="settings-hint">Scanned when auto-detecting Metro port</p>
 
           <div className="ports-list">

@@ -7,6 +7,7 @@ type Prefs = {
   editor: 'vscode' | 'webstorm'
   theme: 'dark' | 'light'
   networkPorts: number[]
+  autoReconnect: boolean
 }
 
 const DEFAULT_PORTS = [8081, 8082, 8083, 19000, 19001, 19006]
@@ -40,12 +41,13 @@ async function readPrefs(): Promise<Prefs> {
     const data = await fs.readFile(getPrefsPath(), 'utf-8')
     const p = JSON.parse(data) as Partial<Prefs>
     return {
-      editor:       p.editor       ?? 'vscode',
-      theme:        p.theme        ?? 'dark',
-      networkPorts: p.networkPorts ?? DEFAULT_PORTS,
+      editor:        p.editor        ?? 'vscode',
+      theme:         p.theme         ?? 'dark',
+      networkPorts:  p.networkPorts  ?? DEFAULT_PORTS,
+      autoReconnect: p.autoReconnect ?? false,
     }
   } catch {
-    return { editor: 'vscode', theme: 'dark', networkPorts: DEFAULT_PORTS }
+    return { editor: 'vscode', theme: 'dark', networkPorts: DEFAULT_PORTS, autoReconnect: false }
   }
 }
 
@@ -76,4 +78,12 @@ export async function getNetworkPorts(): Promise<number[]> {
 
 export async function setNetworkPorts(ports: number[]): Promise<void> {
   await writePrefs({ networkPorts: ports })
+}
+
+export async function getAutoReconnect(): Promise<boolean> {
+  return (await readPrefs()).autoReconnect
+}
+
+export async function setAutoReconnect(v: boolean): Promise<void> {
+  await writePrefs({ autoReconnect: v })
 }

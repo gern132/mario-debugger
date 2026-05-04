@@ -14,6 +14,8 @@ declare global {
       setTheme: (theme: 'dark' | 'light') => Promise<void>
       getNetworkPorts: () => Promise<number[]>
       setNetworkPorts: (ports: number[]) => Promise<void>
+      getAutoReconnect: () => Promise<boolean>
+      setAutoReconnect: (v: boolean) => Promise<void>
       // Device
       getAdbDevices: () => Promise<string[]>
       detectPackageName: (projectPath: string) => Promise<string | null>
