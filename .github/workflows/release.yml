@@ -24,4 +24,4 @@ jobs:
       - name: Build & publish DMG
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build && npx electron-builder --mac dmg --publish always
+        run: npm run package -- --publish always
